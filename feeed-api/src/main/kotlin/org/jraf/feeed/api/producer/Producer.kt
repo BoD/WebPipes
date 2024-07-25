@@ -1,5 +1,5 @@
 /*
- * This source is part of the
+ * This producer is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,11 +23,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.model.source
+package org.jraf.feeed.api.producer
 
 import okio.Closeable
-import org.jraf.feeed.engine.model.feed.Feed
 
-interface FeedSource : Closeable {
-  suspend fun produce(): Result<Feed>
+interface Producer<out T> : Closeable {
+  suspend fun produce(): Result<T>
 }

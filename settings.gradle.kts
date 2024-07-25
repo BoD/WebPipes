@@ -19,7 +19,9 @@ plugins {
 }
 
 include(
+  ":feeed-api",
   ":engine",
+  ":atom",
   ":server",
   ":main",
 )

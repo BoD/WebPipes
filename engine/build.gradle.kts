@@ -22,4 +22,7 @@ dependencies {
 
   // XSoup
   implementation("us.codecraft:xsoup:_")
+
+  // Feeed API
+  api(project(":feeed-api"))
 }

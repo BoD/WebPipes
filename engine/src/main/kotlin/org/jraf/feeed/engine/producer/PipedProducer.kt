@@ -23,10 +23,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.model.feed
+package org.jraf.feeed.engine.producer
 
-data class FeedItem(
-  val title: String,
-  val link: String?,
-  val date: String,
-)
+import org.jraf.feeed.api.producer.Producer
+
+abstract class PipedProducer<T, U>(
+  private val upstreamProducer: Producer<T>,
+) : Producer<U> {
+
+  override suspend fun produce(): Result<U> {
+    return upstreamProducer.produce().mapCatching { produce(it).getOrThrow() }
+  }
+
+  protected abstract suspend fun produce(input: T): Result<U>
+
+  override fun close() {
+    upstreamProducer.close()
+  }
+}

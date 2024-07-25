@@ -21,7 +21,10 @@ dependencies {
   implementation("org.slf4j:slf4j-api:_")
   runtimeOnly("ch.qos.logback:logback-classic:_")
 
+  // Feeed
   implementation(project(":server"))
+  implementation(project(":engine"))
+  implementation(project(":atom"))
 }
 
 docker {

@@ -1,5 +1,5 @@
 /*
- * This source is part of the
+ * This producer is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,9 +23,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.model.feed
+package org.jraf.feeed.api.feed
 
-data class Feed(
-  val items: List<FeedItem>,
+import java.time.Instant
+
+data class FeedItem(
+  val title: String,
+  val link: String,
+  val date: Instant,
+  val contents: String,
 )
-
