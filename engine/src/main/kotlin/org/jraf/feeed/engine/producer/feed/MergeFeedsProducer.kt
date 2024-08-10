@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,40 +23,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer
+package org.jraf.feeed.engine.producer.feed
 
 import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.slf4j.LoggerFactory
-import us.codecraft.xsoup.Xsoup
-import java.time.Instant
+import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.engine.producer.generic.pipe
 
-private val logger = LoggerFactory.getLogger(HtmlFeedProducer::class.java)
-
-class HtmlFeedProducer : Producer<String, Feed> {
-
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, Feed>> {
+class MergeFeedsProducer : Producer<Feed, Feed> {
+  override suspend fun produce(context: ProducerContext, input: Feed): Result<ProducerOutput<Feed>> {
     return runCatching {
-      val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["xPath"]
-      val xPathEvaluator = Xsoup.compile(xPath)
-
-      val document: Document = Jsoup.parse(input, baseUrl)
-      val items = xPathEvaluator.evaluate(document).elements.map { aElement ->
-        FeedItem(
-          title = aElement.text(),
-          link = aElement.absUrl("href"),
-          date = Instant.EPOCH,
-          body = "",
-        )
-      }
-      context to Feed(items)
+      val existingFeed: Feed = context["feed", Feed(emptyList())]
+      val merged = existingFeed.copy(
+        items = (existingFeed.items + input.items)
+          .distinctBy { it.link }
+          .sortedByDescending { it.date }
+      )
+      context to merged
     }
   }
 
   override fun close() {}
+}
+
+fun <IN> Producer<IN, Feed>.mergeFeeds(): Producer<IN, Feed> {
+  return pipe(MergeFeedsProducer())
 }

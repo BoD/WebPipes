@@ -62,3 +62,7 @@ class FeedItemMapProducer(
     coroutineScope.cancel()
   }
 }
+
+fun <IN> Producer<IN, Feed>.feedItemMap(mapper: Producer<FeedItem, FeedItem>): Producer<IN, Feed> {
+  return pipe(FeedItemMapProducer(mapper))
+}

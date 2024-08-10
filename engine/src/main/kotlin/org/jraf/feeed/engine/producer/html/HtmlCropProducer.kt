@@ -23,34 +23,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.generic
+package org.jraf.feeed.engine.producer.html
 
-import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.api.producer.value
+import org.jraf.feeed.engine.producer.generic.pipe
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import us.codecraft.xsoup.Xsoup
 
-class FeedItemMapFieldProducer<T>(
-  private val mapper: Producer<T, T>,
-) : Producer<FeedItem, FeedItem> {
-  override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
-    val fieldIn: FeedItem.Field<T> = context["fieldIn"]
-    val fieldOut: FeedItem.Field<T> = context["fieldOut"]
-
+class HtmlCropProducer : Producer<String, String> {
+  override suspend fun produce(context: ProducerContext, input: String): Result<ProducerOutput<String>> {
     return runCatching {
-      val fieldCurrentValue: T = input[fieldIn]
-      val fieldNewValue = mapper.produce(context, fieldCurrentValue).getOrThrow()
-      // Note: the mapped field's context is lost
-      context to input.with(fieldOut, fieldNewValue.value)
+      val baseUrl: String = context["baseUrl"]
+      val xPath: String = context["xPath"]
+      val xPathEvaluator = Xsoup.compile(xPath)
+      val document: Document = Jsoup.parse(input, baseUrl)
+      context to (xPathEvaluator.evaluate(document).elements.first()?.outerHtml() ?: "")
     }
   }
 
-  override fun close() {
-    mapper.close()
-  }
+  override fun close() {}
 }
 
-fun <T> Producer<FeedItem, FeedItem>.feedItemMapField(mapper: Producer<T, T>): Producer<FeedItem, FeedItem> {
-  return pipe(FeedItemMapFieldProducer(mapper))
+fun <IN> Producer<IN, String>.htmlCrop(): Producer<IN, String> {
+  return pipe(HtmlCropProducer())
 }

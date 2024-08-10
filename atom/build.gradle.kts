@@ -12,7 +12,7 @@ dependencies {
   runtimeOnly("ch.qos.logback:logback-classic:_")
 
   // Feeed API
-  implementation(project(":feeed-api"))
+  implementation(project(":engine"))
 
   // RSS / Atom
   implementation("com.rometools:rome:_")

@@ -23,34 +23,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.generic
+package org.jraf.feeed.engine.producer.feed
 
-import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.api.producer.value
+import org.jraf.feeed.engine.producer.generic.pipe
 
-class FeedItemMapFieldProducer<T>(
-  private val mapper: Producer<T, T>,
-) : Producer<FeedItem, FeedItem> {
-  override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
-    val fieldIn: FeedItem.Field<T> = context["fieldIn"]
-    val fieldOut: FeedItem.Field<T> = context["fieldOut"]
-
+class FeedMaxItemsProducer : Producer<Feed, Feed> {
+  override suspend fun produce(context: ProducerContext, input: Feed): Result<ProducerOutput<Feed>> {
     return runCatching {
-      val fieldCurrentValue: T = input[fieldIn]
-      val fieldNewValue = mapper.produce(context, fieldCurrentValue).getOrThrow()
-      // Note: the mapped field's context is lost
-      context to input.with(fieldOut, fieldNewValue.value)
+      val maxItems: Int = context["maxItems", 30]
+      val items = input.items.take(maxItems)
+      context to input.copy(items = items)
     }
   }
 
-  override fun close() {
-    mapper.close()
-  }
+  override fun close() {}
 }
 
-fun <T> Producer<FeedItem, FeedItem>.feedItemMapField(mapper: Producer<T, T>): Producer<FeedItem, FeedItem> {
-  return pipe(FeedItemMapFieldProducer(mapper))
+fun <IN> Producer<IN, Feed>.feedMaxItems(): Producer<IN, Feed> {
+  return pipe(FeedMaxItemsProducer())
 }

@@ -25,18 +25,22 @@
 
 package org.jraf.feeed.main
 
+import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.value
-import org.jraf.feeed.atom.FeedToAtom
-import org.jraf.feeed.engine.producer.HtmlCropProducer
-import org.jraf.feeed.engine.producer.HtmlFeedProducer
+import org.jraf.feeed.atom.atom
 import org.jraf.feeed.engine.producer.UrlTextProducer
+import org.jraf.feeed.engine.producer.feed.feedMaxItems
+import org.jraf.feeed.engine.producer.feed.mergeFeeds
 import org.jraf.feeed.engine.producer.generic.AddFeedItemFieldToContextProducer
-import org.jraf.feeed.engine.producer.generic.FeedItemMapFieldProducer
-import org.jraf.feeed.engine.producer.generic.FeedItemMapProducer
-import org.jraf.feeed.engine.producer.generic.pipe
-import org.jraf.feeed.engine.producer.generic.withContext
+import org.jraf.feeed.engine.producer.generic.addInputToContext
+import org.jraf.feeed.engine.producer.generic.addToContext
+import org.jraf.feeed.engine.producer.generic.feedItemMap
+import org.jraf.feeed.engine.producer.generic.feedItemMapField
+import org.jraf.feeed.engine.producer.html.htmlCrop
+import org.jraf.feeed.engine.producer.html.htmlFeed
 import org.jraf.feeed.server.Server
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -50,41 +54,41 @@ class Main {
     val url =
       "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
 
-    val producer =
+    val producer: Producer<String, Feed> =
       UrlTextProducer()
-        .withContext(
+        .addToContext(
           "baseUrl" to url,
           "xPath" to "//div[@class='info-wrapper']//a",
         )
-        .pipe(HtmlFeedProducer())
-        .pipe(
-          FeedItemMapProducer(
-            AddFeedItemFieldToContextProducer(FeedItem.Field.Link, "baseUrl")
-              .withContext(
-                "fieldIn" to FeedItem.Field.Link,
-                "fieldOut" to FeedItem.Field.Body,
-              )
-              .pipe(
-                FeedItemMapFieldProducer(
-                  UrlTextProducer()
-                    .withContext("xPath" to "//div[@class='component--film-presentation d-flex flex-wrap']")
-                    .pipe(HtmlCropProducer())
-                )
-              )
-          )
+        .htmlFeed()
+        .feedItemMap(
+          AddFeedItemFieldToContextProducer(FeedItem.Field.Link, "baseUrl")
+            .addToContext(
+              "fieldIn" to FeedItem.Field.Link,
+              "fieldOut" to FeedItem.Field.Body,
+            )
+            .feedItemMapField(
+              UrlTextProducer()
+                .addToContext("xPath" to "//div[@class='component--film-presentation d-flex flex-wrap']")
+                .htmlCrop()
+            )
         )
+        .mergeFeeds()
+        .feedMaxItems()
+        .addInputToContext()
 
-    val feedToAtom = FeedToAtom()
+    val context = ProducerContext()
 
     Server { requestParams ->
-      val feed = producer.produce(ProducerContext(), url).getOrThrow().value
-      feedToAtom.convert(
-        source = feed,
-        atomTitle = "UGC Culte",
-        atomDescription = "UGC Culte",
-        atomLink = requestParams.requestUrl,
-        atomPublishedDate = Instant.now(),
-      )
+      producer
+        .addToContext(
+          "atomTitle" to "UGC Culte",
+          "atomDescription" to "UGC Culte",
+          "atomLink" to requestParams.requestUrl,
+          "atomPublishedDate" to Instant.now(),
+        )
+        .atom()
+        .produce(context, url).getOrThrow().value
     }.start()
   }
 }

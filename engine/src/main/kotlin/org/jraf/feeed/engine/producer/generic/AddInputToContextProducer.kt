@@ -25,32 +25,21 @@
 
 package org.jraf.feeed.engine.producer.generic
 
-import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.api.producer.value
 
-class FeedItemMapFieldProducer<T>(
-  private val mapper: Producer<T, T>,
-) : Producer<FeedItem, FeedItem> {
-  override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
-    val fieldIn: FeedItem.Field<T> = context["fieldIn"]
-    val fieldOut: FeedItem.Field<T> = context["fieldOut"]
-
+class AddInputToContextProducer<T> : Producer<T, T> {
+  override suspend fun produce(context: ProducerContext, input: T): Result<ProducerOutput<T>> {
     return runCatching {
-      val fieldCurrentValue: T = input[fieldIn]
-      val fieldNewValue = mapper.produce(context, fieldCurrentValue).getOrThrow()
-      // Note: the mapped field's context is lost
-      context to input.with(fieldOut, fieldNewValue.value)
+      val key: String = context["key", "value"]
+      context.with(key, input) to input
     }
   }
 
-  override fun close() {
-    mapper.close()
-  }
+  override fun close() {}
 }
 
-fun <T> Producer<FeedItem, FeedItem>.feedItemMapField(mapper: Producer<T, T>): Producer<FeedItem, FeedItem> {
-  return pipe(FeedItemMapFieldProducer(mapper))
+fun <IN, OUT> Producer<IN, OUT>.addInputToContext(): Producer<IN, OUT> {
+  return pipe(AddInputToContextProducer())
 }

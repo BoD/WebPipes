@@ -39,6 +39,15 @@ class ProducerContext private constructor(
     return value
   }
 
+  operator fun <T> get(key: String, default: T): T {
+    if (!context.containsKey(key)) {
+      return default
+    }
+    @Suppress("UNCHECKED_CAST")
+    val value = context[key] as? T ?: throw IllegalArgumentException("'$key' is not of the expected type")
+    return value
+  }
+
   fun with(key: String, value: Any?): ProducerContext {
     return ProducerContext(context + (key to value))
   }
