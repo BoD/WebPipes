@@ -42,3 +42,11 @@ class AddToContextProducer<T>(private val additionalContext: ProducerContext) : 
 
   override fun close() {}
 }
+
+fun <T> Producer<T, T>.withContext(additionalContext: ProducerContext): Producer<T, T> {
+  return pipe(AddToContextProducer(additionalContext))
+}
+
+fun <T> Producer<T, T>.withContext(vararg additionalContext: Pair<String, Any?>): Producer<T, T> {
+  return pipe(AddToContextProducer(*additionalContext))
+}

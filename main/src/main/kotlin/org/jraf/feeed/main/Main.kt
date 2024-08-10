@@ -33,10 +33,10 @@ import org.jraf.feeed.engine.producer.HtmlCropProducer
 import org.jraf.feeed.engine.producer.HtmlFeedProducer
 import org.jraf.feeed.engine.producer.UrlTextProducer
 import org.jraf.feeed.engine.producer.generic.AddFeedItemFieldToContextProducer
-import org.jraf.feeed.engine.producer.generic.AddToContextProducer
 import org.jraf.feeed.engine.producer.generic.FeedItemMapFieldProducer
 import org.jraf.feeed.engine.producer.generic.FeedItemMapProducer
 import org.jraf.feeed.engine.producer.generic.pipe
+import org.jraf.feeed.engine.producer.generic.withContext
 import org.jraf.feeed.server.Server
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -51,28 +51,27 @@ class Main {
       "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
 
     val producer =
-      UrlTextProducer() pipe
-        AddToContextProducer(
+      UrlTextProducer()
+        .withContext(
           "baseUrl" to url,
           "xPath" to "//div[@class='info-wrapper']//a",
-        ) pipe
-        HtmlFeedProducer() pipe
-        FeedItemMapProducer(
-          AddToContextProducer<FeedItem>(
-            "fieldIn" to FeedItem.Field.Link,
-            "fieldOut" to FeedItem.Field.Body,
-          ) pipe
-            AddFeedItemFieldToContextProducer(
-              FeedItem.Field.Link,
-              "baseUrl",
-            ) pipe
-            FeedItemMapFieldProducer(
-              UrlTextProducer() pipe
-                AddToContextProducer(
-                  "xPath" to "//div[@class='component--film-presentation d-flex flex-wrap']",
-                ) pipe
-                HtmlCropProducer()
-            )
+        )
+        .pipe(HtmlFeedProducer())
+        .pipe(
+          FeedItemMapProducer(
+            AddFeedItemFieldToContextProducer(FeedItem.Field.Link, "baseUrl")
+              .withContext(
+                "fieldIn" to FeedItem.Field.Link,
+                "fieldOut" to FeedItem.Field.Body,
+              )
+              .pipe(
+                FeedItemMapFieldProducer(
+                  UrlTextProducer()
+                    .withContext("xPath" to "//div[@class='component--film-presentation d-flex flex-wrap']")
+                    .pipe(HtmlCropProducer())
+                )
+              )
+          )
         )
 
     val feedToAtom = FeedToAtom()

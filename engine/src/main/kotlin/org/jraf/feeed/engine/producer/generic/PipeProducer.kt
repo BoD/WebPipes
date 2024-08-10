@@ -30,7 +30,7 @@ import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.context
 import org.jraf.feeed.api.producer.value
 
-class ProducerPipe<IN, SHARED, OUT>(
+class PipeProducer<IN, SHARED, OUT>(
   private val upstreamProducer: Producer<IN, SHARED>,
   private val downstreamProducer: Producer<SHARED, OUT>,
 ) : Producer<IN, OUT> {
@@ -46,6 +46,6 @@ class ProducerPipe<IN, SHARED, OUT>(
   }
 }
 
-infix fun <IN, SHARED, OUT> Producer<IN, SHARED>.pipe(downstreamProducer: Producer<SHARED, OUT>): Producer<IN, OUT> {
-  return ProducerPipe(this, downstreamProducer)
+fun <IN, SHARED, OUT> Producer<IN, SHARED>.pipe(downstreamProducer: Producer<SHARED, OUT>): Producer<IN, OUT> {
+  return PipeProducer(this, downstreamProducer)
 }
