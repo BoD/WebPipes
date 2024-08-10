@@ -56,7 +56,7 @@ class FeedToAtom {
         uri = feedItem.link
         contents = listOf(SyndContentImpl().apply {
           type = "text/html"
-          value = feedItem.contents
+          value = feedItem.body
         })
         publishedDate = Date.from(feedItem.date)
       }

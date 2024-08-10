@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,40 +23,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer
+package org.jraf.feeed.engine.producer.generic
 
-import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.slf4j.LoggerFactory
-import us.codecraft.xsoup.Xsoup
-import java.time.Instant
+import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.api.producer.value
 
-private val logger = LoggerFactory.getLogger(HtmlFeedProducer::class.java)
+class FeedItemMapFieldProducer<T>(
+  private val mapper: Producer<T, T>,
+) : Producer<FeedItem, FeedItem> {
+  override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
+    val fieldIn: FeedItem.Field<T> = context["fieldIn"]
+    val fieldOut: FeedItem.Field<T> = context["fieldOut"]
 
-class HtmlFeedProducer : Producer<String, Feed> {
-
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, Feed>> {
     return runCatching {
-      val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["xPath"]
-      val xPathEvaluator = Xsoup.compile(xPath)
-
-      val document: Document = Jsoup.parse(input, baseUrl)
-      val items = xPathEvaluator.evaluate(document).elements.map { aElement ->
-        FeedItem(
-          title = aElement.text(),
-          link = aElement.absUrl("href"),
-          date = Instant.EPOCH,
-          body = "",
-        )
-      }
-      context to Feed(items)
+      val fieldCurrentValue: T = input[fieldIn]
+      val fieldNewValue = mapper.produce(context, fieldCurrentValue).getOrThrow()
+      // Note: the mapped field's context is lost
+      context to input.with(fieldOut, fieldNewValue.value)
     }
   }
 
-  override fun close() {}
+  override fun close() {
+    mapper.close()
+  }
 }

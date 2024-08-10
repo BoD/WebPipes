@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,15 +23,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api.producer
+package org.jraf.feeed.engine.producer.generic
 
-import okio.Closeable
+import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.producer.Producer
+import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.producer.ProducerOutput
 
-interface Producer<in IN, out OUT> : Closeable {
-  suspend fun produce(context: ProducerContext, input: IN): Result<ProducerOutput<OUT>>
+class AddFeedItemFieldToContextProducer(
+  private val field: FeedItem.Field<*>,
+  private val contextItemName: String,
+) : Producer<FeedItem, FeedItem> {
+  override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
+    return Result.success(context.with(contextItemName, input[field]) to input)
+  }
+
+  override fun close() {}
 }
-
-typealias ProducerOutput<T> = Pair<ProducerContext, T>
-
-inline val <T> ProducerOutput<T>.context get() = first
-inline val <T> ProducerOutput<T>.value get() = second

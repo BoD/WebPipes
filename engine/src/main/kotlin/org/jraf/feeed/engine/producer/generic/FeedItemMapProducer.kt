@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,40 +23,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer
+package org.jraf.feeed.engine.producer.generic
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.slf4j.LoggerFactory
-import us.codecraft.xsoup.Xsoup
-import java.time.Instant
+import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.api.producer.value
 
-private val logger = LoggerFactory.getLogger(HtmlFeedProducer::class.java)
+class FeedItemMapProducer(
+  private val mapper: Producer<FeedItem, FeedItem>,
+) : Producer<Feed, Feed> {
 
-class HtmlFeedProducer : Producer<String, Feed> {
+  private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, Feed>> {
+  override suspend fun produce(context: ProducerContext, input: Feed): Result<Pair<ProducerContext, Feed>> {
     return runCatching {
-      val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["xPath"]
-      val xPathEvaluator = Xsoup.compile(xPath)
-
-      val document: Document = Jsoup.parse(input, baseUrl)
-      val items = xPathEvaluator.evaluate(document).elements.map { aElement ->
-        FeedItem(
-          title = aElement.text(),
-          link = aElement.absUrl("href"),
-          date = Instant.EPOCH,
-          body = "",
-        )
-      }
-      context to Feed(items)
+      val asyncResults: List<Deferred<Result<ProducerOutput<FeedItem>>>> =
+        input.items.map { feedItem -> coroutineScope.async { mapper.produce(context, feedItem) } }
+      context to input.copy(
+        items = List(input.items.size) { i ->
+          // Note: the mapped item's context is lost
+          asyncResults[i].await().getOrThrow().value
+        }
+      )
     }
   }
 
-  override fun close() {}
+  override fun close() {
+    mapper.close()
+    coroutineScope.cancel()
+  }
 }

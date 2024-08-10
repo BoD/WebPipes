@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -25,13 +25,25 @@
 
 package org.jraf.feeed.api.producer
 
-import okio.Closeable
+class ProducerContext private constructor(
+  private val context: Map<String, Any?>,
+) {
+  constructor() : this(emptyMap())
 
-interface Producer<in IN, out OUT> : Closeable {
-  suspend fun produce(context: ProducerContext, input: IN): Result<ProducerOutput<OUT>>
+  operator fun <T> get(key: String): T {
+    if (!context.containsKey(key)) {
+      throw IllegalArgumentException("'$key' not found in context")
+    }
+    @Suppress("UNCHECKED_CAST")
+    val value = context[key] as? T ?: throw IllegalArgumentException("'$key' is not of the expected type")
+    return value
+  }
+
+  fun with(key: String, value: Any?): ProducerContext {
+    return ProducerContext(context + (key to value))
+  }
+
+  operator fun plus(other: ProducerContext): ProducerContext {
+    return ProducerContext(context + other.context)
+  }
 }
-
-typealias ProducerOutput<T> = Pair<ProducerContext, T>
-
-inline val <T> ProducerOutput<T>.context get() = first
-inline val <T> ProducerOutput<T>.value get() = second

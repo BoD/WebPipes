@@ -23,21 +23,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer
+package org.jraf.feeed.engine.producer.generic
 
 import org.jraf.feeed.api.producer.Producer
+import org.jraf.feeed.api.producer.ProducerContext
 
-abstract class PipedProducer<T, U>(
-  private val upstreamProducer: Producer<T>,
-) : Producer<U> {
+class AddToContextProducer<T>(private val additionalContext: ProducerContext) : Producer<T, T> {
+  constructor(vararg additionalContext: Pair<String, Any?>) : this(additionalContext.fold(ProducerContext()) { acc, (key, value) ->
+    acc.with(
+      key,
+      value
+    )
+  })
 
-  override suspend fun produce(): Result<U> {
-    return upstreamProducer.produce().mapCatching { produce(it).getOrThrow() }
+  override suspend fun produce(context: ProducerContext, input: T): Result<Pair<ProducerContext, T>> {
+    return Result.success((context + additionalContext) to input)
   }
 
-  protected abstract suspend fun produce(input: T): Result<U>
-
-  override fun close() {
-    upstreamProducer.close()
-  }
+  override fun close() {}
 }

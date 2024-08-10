@@ -31,5 +31,35 @@ data class FeedItem(
   val title: String,
   val link: String,
   val date: Instant,
-  val contents: String,
-)
+  val body: String,
+  val extras: Map<String, String> = emptyMap(),
+) {
+  sealed interface Field<T> {
+    data object Title : Field<String>
+    data object Link : Field<String>
+    data object Date : Field<Instant>
+    data object Body : Field<String>
+    data class Extra(val name: String) : Field<Any?>
+  }
+
+  operator fun <T> get(field: Field<T>): T {
+    @Suppress("UNCHECKED_CAST")
+    return when (field) {
+      Field.Title -> title
+      Field.Link -> link
+      Field.Date -> date
+      Field.Body -> body
+      is Field.Extra -> extras[field.name]
+    } as T
+  }
+
+  fun <T> with(field: Field<T>, value: T): FeedItem {
+    return when (field) {
+      Field.Title -> copy(title = value as String)
+      Field.Link -> copy(link = value as String)
+      Field.Date -> copy(date = value as Instant)
+      Field.Body -> copy(body = value as String)
+      is Field.Extra -> copy(extras = extras + (field.name to value as String))
+    }
+  }
+}

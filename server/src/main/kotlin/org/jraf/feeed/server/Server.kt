@@ -48,7 +48,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import org.slf4j.event.Level
 
-private const val DEFAULT_PORT = 8080
+private const val DEFAULT_PORT = 8042
 
 private const val ENV_PORT = "PORT"
 

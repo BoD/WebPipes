@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,15 +23,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api.producer
+package org.jraf.feeed.engine.producer
 
-import okio.Closeable
+import org.jraf.feeed.api.producer.Producer
+import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.producer.ProducerOutput
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import us.codecraft.xsoup.Xsoup
 
-interface Producer<in IN, out OUT> : Closeable {
-  suspend fun produce(context: ProducerContext, input: IN): Result<ProducerOutput<OUT>>
+class HtmlCropProducer : Producer<String, String> {
+  override suspend fun produce(context: ProducerContext, input: String): Result<ProducerOutput<String>> {
+    return runCatching {
+      val baseUrl: String = context["baseUrl"]
+      val xPath: String = context["xPath"]
+      val xPathEvaluator = Xsoup.compile(xPath)
+      val document: Document = Jsoup.parse(input, baseUrl)
+      context to (xPathEvaluator.evaluate(document).elements.first()?.outerHtml() ?: "")
+    }
+  }
+
+  override fun close() {}
 }
-
-typealias ProducerOutput<T> = Pair<ProducerContext, T>
-
-inline val <T> ProducerOutput<T>.context get() = first
-inline val <T> ProducerOutput<T>.value get() = second

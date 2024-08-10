@@ -30,16 +30,19 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.jraf.feeed.api.producer.Producer
+import org.jraf.feeed.api.producer.ProducerContext
+import org.slf4j.LoggerFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class UrlTextProducer(
-  private val url: String,
-) : Producer<String> {
+private val logger = LoggerFactory.getLogger(UrlTextProducer::class.java)
+
+class UrlTextProducer : Producer<String, String> {
   private val httpClient = OkHttpClient.Builder().build()
 
-  override suspend fun produce(): Result<String> {
-    val call = httpClient.newCall(Request.Builder().url(url).build())
+  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, String>> {
+    logger.debug("Fetching {}", input)
+    val call = httpClient.newCall(Request.Builder().url(input).build())
     val response: Response = try {
       suspendCancellableCoroutine { continuation ->
         continuation.invokeOnCancellation {
@@ -52,12 +55,13 @@ class UrlTextProducer(
         }
       }
     } catch (e: Exception) {
+      logger.error("Failed to fetch $input", e)
       return Result.failure(e)
     }
 
     return response.use { resp ->
-      val body = resp.body?.string() ?: return Result.failure(Exception("Failed to fetch $url: empty body"))
-      Result.success(body)
+      val body = resp.body?.string() ?: return Result.failure(Exception("Failed to fetch $input: empty body"))
+      Result.success(context to body)
     }
   }
 

@@ -25,9 +25,18 @@
 
 package org.jraf.feeed.main
 
+import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.producer.value
 import org.jraf.feeed.atom.FeedToAtom
+import org.jraf.feeed.engine.producer.HtmlCropProducer
 import org.jraf.feeed.engine.producer.HtmlFeedProducer
 import org.jraf.feeed.engine.producer.UrlTextProducer
+import org.jraf.feeed.engine.producer.generic.AddFeedItemFieldToContextProducer
+import org.jraf.feeed.engine.producer.generic.AddToContextProducer
+import org.jraf.feeed.engine.producer.generic.FeedItemMapFieldProducer
+import org.jraf.feeed.engine.producer.generic.FeedItemMapProducer
+import org.jraf.feeed.engine.producer.generic.pipe
 import org.jraf.feeed.server.Server
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -40,16 +49,36 @@ class Main {
 
     val url =
       "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
-    val htmlFeedProducer = HtmlFeedProducer(
-      textProducer = UrlTextProducer(url = url),
-      baseUrl = url,
-      xPath = "//div[@class='info-wrapper']//a",
-    )
+
+    val producer =
+      UrlTextProducer() pipe
+        AddToContextProducer(
+          "baseUrl" to url,
+          "xPath" to "//div[@class='info-wrapper']//a",
+        ) pipe
+        HtmlFeedProducer() pipe
+        FeedItemMapProducer(
+          AddToContextProducer<FeedItem>(
+            "fieldIn" to FeedItem.Field.Link,
+            "fieldOut" to FeedItem.Field.Body,
+          ) pipe
+            AddFeedItemFieldToContextProducer(
+              FeedItem.Field.Link,
+              "baseUrl",
+            ) pipe
+            FeedItemMapFieldProducer(
+              UrlTextProducer() pipe
+                AddToContextProducer(
+                  "xPath" to "//div[@class='component--film-presentation d-flex flex-wrap']",
+                ) pipe
+                HtmlCropProducer()
+            )
+        )
 
     val feedToAtom = FeedToAtom()
 
     Server { requestParams ->
-      val feed = htmlFeedProducer.produce().getOrThrow()
+      val feed = producer.produce(ProducerContext(), url).getOrThrow().value
       feedToAtom.convert(
         source = feed,
         atomTitle = "UGC Culte",
