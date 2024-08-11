@@ -29,21 +29,23 @@ import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.producer.context
 import org.jraf.feeed.api.producer.value
 import org.jraf.feeed.atom.atom
 import org.jraf.feeed.engine.producer.UrlTextProducer
 import org.jraf.feeed.engine.producer.feed.feedMaxItems
 import org.jraf.feeed.engine.producer.feed.mergeFeeds
 import org.jraf.feeed.engine.producer.generic.AddFeedItemFieldToContextProducer
+import org.jraf.feeed.engine.producer.generic.IdentityProducer
 import org.jraf.feeed.engine.producer.generic.addInputToContext
 import org.jraf.feeed.engine.producer.generic.addToContext
 import org.jraf.feeed.engine.producer.generic.feedItemMap
 import org.jraf.feeed.engine.producer.generic.feedItemMapField
 import org.jraf.feeed.engine.producer.html.htmlCrop
 import org.jraf.feeed.engine.producer.html.htmlFeed
+import org.jraf.feeed.engine.producer.urlText
 import org.jraf.feeed.server.Server
 import org.slf4j.LoggerFactory
-import java.time.Instant
 
 class Main {
   private val logger = LoggerFactory.getLogger(Main::class.java)
@@ -55,11 +57,11 @@ class Main {
       "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
 
     val producer: Producer<String, Feed> =
-      UrlTextProducer()
-        .addToContext(
-          "baseUrl" to url,
-          "xPath" to "//div[@class='info-wrapper']//a",
-        )
+      IdentityProducer<String>()
+        .addToContext("key" to "baseUrl")
+        .addInputToContext()
+        .urlText()
+        .addToContext("xPath" to "//div[@class='info-wrapper']//a")
         .htmlFeed()
         .feedItemMap(
           AddFeedItemFieldToContextProducer(FeedItem.Field.Link, "baseUrl")
@@ -75,20 +77,23 @@ class Main {
         )
         .mergeFeeds()
         .feedMaxItems()
+        .addToContext("key" to "feed")
         .addInputToContext()
 
-    val context = ProducerContext()
+    var context = ProducerContext()
 
     Server { requestParams ->
-      producer
+      val output = producer
         .addToContext(
           "atomTitle" to "UGC Culte",
           "atomDescription" to "UGC Culte",
           "atomLink" to requestParams.requestUrl,
-          "atomPublishedDate" to Instant.now(),
         )
         .atom()
-        .produce(context, url).getOrThrow().value
+        .produce(context, url)
+        .getOrThrow()
+      context = output.context
+      output.value
     }.start()
   }
 }

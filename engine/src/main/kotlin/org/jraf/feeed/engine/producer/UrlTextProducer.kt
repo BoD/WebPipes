@@ -31,6 +31,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.engine.producer.generic.pipe
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -70,3 +71,5 @@ class UrlTextProducer : Producer<String, String> {
     httpClient.connectionPool.evictAll()
   }
 }
+
+fun <IN> Producer<IN, String>.urlText(): Producer<IN, String> = this.pipe(UrlTextProducer())

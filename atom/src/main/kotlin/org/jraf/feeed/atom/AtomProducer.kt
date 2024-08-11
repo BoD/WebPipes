@@ -45,7 +45,7 @@ class AtomProducer : Producer<Feed, String> {
       val atomTitle: String = context["atomTitle"]
       val atomDescription: String = context["atomDescription"]
       val atomLink: String = context["atomLink"]
-      val atomPublishedDate: Instant = context["atomPublishedDate"]
+      val atomPublishedDate: Instant? = context["atomPublishedDate", null]
 
       val syndFeed: SyndFeed = SyndFeedImpl()
       syndFeed.feedType = "atom_1.0"
@@ -53,7 +53,7 @@ class AtomProducer : Producer<Feed, String> {
       syndFeed.description = atomDescription
       syndFeed.link = atomLink
       syndFeed.uri = atomLink
-      syndFeed.publishedDate = Date.from(atomPublishedDate)
+      syndFeed.publishedDate = atomPublishedDate?.let { Date.from(it) } ?: Date.from(input.items.maxOf { it.date })
       syndFeed.entries = input.items.map { feedItem ->
         SyndEntryImpl().apply {
           title = feedItem.title
