@@ -25,10 +25,10 @@
 
 package org.jraf.feeed.main
 
-import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.producer.ProducerContextReference
 import org.jraf.feeed.api.producer.context
 import org.jraf.feeed.api.producer.value
 import org.jraf.feeed.atom.atom
@@ -56,7 +56,7 @@ class Main {
     val url =
       "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
 
-    val producer: Producer<String, Feed> =
+    val producer: Producer<String, String> =
       IdentityProducer<String>()
         .addToContext("key" to "baseUrl")
         .addInputToContext()
@@ -79,18 +79,21 @@ class Main {
         .feedMaxItems()
         .addToContext("key" to "feed")
         .addInputToContext()
+        .addToContext(
+          "atomTitle" to "UGC Culte",
+          "atomDescription" to "UGC Culte",
+          "atomLink" to ProducerContextReference("requestUrl"),
+        )
+        .atom()
 
     var context = ProducerContext()
 
     Server { requestParams ->
       val output = producer
-        .addToContext(
-          "atomTitle" to "UGC Culte",
-          "atomDescription" to "UGC Culte",
-          "atomLink" to requestParams.requestUrl,
+        .produce(
+          context.with("requestUrl", requestParams.requestUrl),
+          url
         )
-        .atom()
-        .produce(context, url)
         .getOrThrow()
       context = output.context
       output.value

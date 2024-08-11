@@ -34,18 +34,41 @@ class ProducerContext private constructor(
     if (!context.containsKey(key)) {
       throw IllegalArgumentException("'$key' not found in context")
     }
-    @Suppress("UNCHECKED_CAST")
-    val value = context[key] as? T ?: throw IllegalArgumentException("'$key' is not of the expected type")
-    return value
+
+    val value = context[key]
+    if (value is ProducerContextReference) {
+      if (!context.containsKey(value.key)) {
+        throw IllegalArgumentException("'$key' references '${value.key}' which is not found in context")
+      }
+      return get(value.key)
+    }
+
+    return getWithCast(key)
   }
 
   operator fun <T> get(key: String, default: T): T {
     if (!context.containsKey(key)) {
       return default
     }
-    @Suppress("UNCHECKED_CAST")
-    val value = context[key] as? T ?: throw IllegalArgumentException("'$key' is not of the expected type")
-    return value
+
+    val value = context[key]
+    if (value is ProducerContextReference) {
+      if (!context.containsKey(value.key)) {
+        return default
+      }
+      return get(value.key, default)
+    }
+
+    return getWithCast(key)
+  }
+
+  private fun <T> getWithCast(key: String): T {
+    return try {
+      @Suppress("UNCHECKED_CAST")
+      context.get(key) as T
+    } catch (e: ClassCastException) {
+      throw IllegalArgumentException("'$key' is not of the expected type")
+    }
   }
 
   fun with(key: String, value: Any?): ProducerContext {
