@@ -23,16 +23,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.generic
+package org.jraf.feeed.engine.producer.feed
 
+import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.api.producer.value
+import org.jraf.feeed.engine.producer.core.pipe
 
-class IdentityProducer<T> : Producer<T, T> {
-  override suspend fun produce(context: ProducerContext, input: T): Result<ProducerOutput<T>> {
-    return Result.success(context to input)
+class FeedItemMapFieldProducer<T>(
+  private val mapper: Producer<T, T>,
+) : Producer<FeedItem, FeedItem> {
+  override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
+    val fieldIn: FeedItem.Field<T> = context["fieldIn"]
+    val fieldOut: FeedItem.Field<T> = context["fieldOut"]
+
+    return runCatching {
+      val fieldCurrentValue: T = input[fieldIn]
+      val fieldNewValue = mapper.produce(context, fieldCurrentValue).getOrThrow()
+      // Note: the mapped field's context is lost
+      context to input.with(fieldOut, fieldNewValue.value)
+    }
   }
 
-  override fun close() {}
+  override fun close() {
+    mapper.close()
+  }
+}
+
+fun <T> Producer<FeedItem, FeedItem>.feedItemMapField(mapper: Producer<T, T>): Producer<FeedItem, FeedItem> {
+  return pipe(FeedItemMapFieldProducer(mapper))
 }

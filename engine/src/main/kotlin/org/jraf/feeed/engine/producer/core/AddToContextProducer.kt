@@ -23,29 +23,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.generic
+package org.jraf.feeed.engine.producer.core
 
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.context
-import org.jraf.feeed.api.producer.value
 
-class PipeProducer<IN, SHARED, OUT>(
-  private val upstreamProducer: Producer<IN, SHARED>,
-  private val downstreamProducer: Producer<SHARED, OUT>,
-) : Producer<IN, OUT> {
+class AddToContextProducer<T>(private val additionalContext: ProducerContext) : Producer<T, T> {
+  constructor(vararg additionalContext: Pair<String, Any?>) : this(additionalContext.fold(ProducerContext()) { acc, (key, value) ->
+    acc.with(
+      key,
+      value
+    )
+  })
 
-  override suspend fun produce(context: ProducerContext, input: IN): Result<Pair<ProducerContext, OUT>> {
-    return upstreamProducer.produce(context, input)
-      .mapCatching { output -> downstreamProducer.produce(output.context, output.value).getOrThrow() }
+  override suspend fun produce(context: ProducerContext, input: T): Result<Pair<ProducerContext, T>> {
+    return Result.success((context + additionalContext) to input)
   }
 
-  override fun close() {
-    upstreamProducer.close()
-    downstreamProducer.close()
-  }
+  override fun close() {}
 }
 
-fun <IN, SHARED, OUT> Producer<IN, SHARED>.pipe(downstreamProducer: Producer<SHARED, OUT>): Producer<IN, OUT> {
-  return PipeProducer(this, downstreamProducer)
+fun <IN, OUT> Producer<IN, OUT>.addToContext(additionalContext: ProducerContext): Producer<IN, OUT> {
+  return pipe(AddToContextProducer(additionalContext))
+}
+
+fun <IN, OUT> Producer<IN, OUT>.addToContext(vararg additionalContext: Pair<String, Any?>): Producer<IN, OUT> {
+  return pipe(AddToContextProducer(*additionalContext))
 }

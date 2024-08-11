@@ -28,7 +28,7 @@ package org.jraf.feeed.engine.producer.html
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.engine.producer.generic.pipe
+import org.jraf.feeed.engine.producer.core.pipe
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import us.codecraft.xsoup.Xsoup

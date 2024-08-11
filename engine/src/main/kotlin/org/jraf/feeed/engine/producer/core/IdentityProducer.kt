@@ -23,41 +23,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.html
+package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.pipe
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import us.codecraft.xsoup.Xsoup
-import java.time.Instant
+import org.jraf.feeed.api.producer.ProducerOutput
 
-class HtmlFeedProducer : Producer<String, Feed> {
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, Feed>> {
-    return runCatching {
-      val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["xPath"]
-      val xPathEvaluator = Xsoup.compile(xPath)
-
-      val document: Document = Jsoup.parse(input, baseUrl)
-      val items = xPathEvaluator.evaluate(document).elements.map { aElement ->
-        FeedItem(
-          title = aElement.text(),
-          link = aElement.absUrl("href"),
-          date = Instant.now(),
-          body = "",
-        )
-      }
-      context to Feed(items)
-    }
+class IdentityProducer<T> : Producer<T, T> {
+  override suspend fun produce(context: ProducerContext, input: T): Result<ProducerOutput<T>> {
+    return Result.success(context to input)
   }
 
   override fun close() {}
-}
-
-fun <IN> Producer<IN, String>.htmlFeed(): Producer<IN, Feed> {
-  return pipe(HtmlFeedProducer())
 }

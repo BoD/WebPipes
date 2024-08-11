@@ -33,14 +33,15 @@ import org.jraf.feeed.api.producer.context
 import org.jraf.feeed.api.producer.value
 import org.jraf.feeed.atom.atom
 import org.jraf.feeed.engine.producer.UrlTextProducer
+import org.jraf.feeed.engine.producer.core.IdentityProducer
+import org.jraf.feeed.engine.producer.core.addInputToContext
+import org.jraf.feeed.engine.producer.core.addToContext
+import org.jraf.feeed.engine.producer.core.cache
+import org.jraf.feeed.engine.producer.feed.AddFeedItemFieldToContextProducer
+import org.jraf.feeed.engine.producer.feed.feedItemMap
+import org.jraf.feeed.engine.producer.feed.feedItemMapField
 import org.jraf.feeed.engine.producer.feed.feedMaxItems
 import org.jraf.feeed.engine.producer.feed.mergeFeeds
-import org.jraf.feeed.engine.producer.generic.AddFeedItemFieldToContextProducer
-import org.jraf.feeed.engine.producer.generic.IdentityProducer
-import org.jraf.feeed.engine.producer.generic.addInputToContext
-import org.jraf.feeed.engine.producer.generic.addToContext
-import org.jraf.feeed.engine.producer.generic.feedItemMap
-import org.jraf.feeed.engine.producer.generic.feedItemMapField
 import org.jraf.feeed.engine.producer.html.htmlCrop
 import org.jraf.feeed.engine.producer.html.htmlFeed
 import org.jraf.feeed.engine.producer.urlText
@@ -85,6 +86,7 @@ class Main {
           "atomLink" to ProducerContextReference("requestUrl"),
         )
         .atom()
+        .cache()
 
     var context = ProducerContext()
 

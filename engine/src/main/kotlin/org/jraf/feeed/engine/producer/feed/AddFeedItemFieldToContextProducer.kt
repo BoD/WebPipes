@@ -23,7 +23,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.generic
+package org.jraf.feeed.engine.producer.feed
 
 import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer

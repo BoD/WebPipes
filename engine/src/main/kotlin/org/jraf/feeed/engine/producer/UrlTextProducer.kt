@@ -31,7 +31,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.generic.pipe
+import org.jraf.feeed.engine.producer.core.pipe
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException

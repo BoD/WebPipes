@@ -34,7 +34,7 @@ import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.engine.producer.generic.pipe
+import org.jraf.feeed.engine.producer.core.pipe
 import java.time.Instant
 import java.util.Date
 
