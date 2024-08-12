@@ -31,6 +31,7 @@ import com.rometools.rome.feed.synd.SyndFeed
 import com.rometools.rome.feed.synd.SyndFeedImpl
 import com.rometools.rome.io.SyndFeedOutput
 import org.jraf.feeed.api.feed.Feed
+import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
@@ -59,11 +60,14 @@ class AtomProducer : Producer<Feed, String> {
           title = feedItem.title
           link = feedItem.link
           uri = feedItem.link
-          contents = listOf(SyndContentImpl().apply {
-            type = "text/html"
-            value = feedItem.body
-          })
+          feedItem.body?.let { body ->
+            contents = listOf(SyndContentImpl().apply {
+              type = "text/html"
+              value = body
+            })
+          }
           publishedDate = Date.from(feedItem.date)
+          author = feedItem[FeedItem.Field.Extra("author")] as? String? ?: context["atomEntriesAuthor", null]
         }
       }
       context to SyndFeedOutput().outputString(syndFeed)

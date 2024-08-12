@@ -31,14 +31,14 @@ data class FeedItem(
   val title: String,
   val link: String,
   val date: Instant,
-  val body: String,
+  val body: String?,
   val extras: Map<String, String> = emptyMap(),
 ) {
   sealed interface Field<T> {
     data object Title : Field<String>
     data object Link : Field<String>
     data object Date : Field<Instant>
-    data object Body : Field<String>
+    data object Body : Field<String?>
     data class Extra(val name: String) : Field<Any?>
   }
 

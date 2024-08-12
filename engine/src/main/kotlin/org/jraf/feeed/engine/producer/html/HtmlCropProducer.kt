@@ -38,9 +38,12 @@ class HtmlCropProducer : Producer<String, String> {
     return runCatching {
       val baseUrl: String = context["baseUrl"]
       val xPath: String = context["xPath"]
+      val extractText: Boolean = context["extractText", false]
       val xPathEvaluator = Xsoup.compile(xPath)
       val document: Document = Jsoup.parse(input, baseUrl)
-      context to (xPathEvaluator.evaluate(document).elements.first()?.outerHtml() ?: "")
+      val element = xPathEvaluator.evaluate(document).elements.first()
+      val text = (if (extractText) element?.text() else element?.outerHtml()) ?: ""
+      context to text
     }
   }
 

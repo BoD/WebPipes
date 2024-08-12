@@ -62,7 +62,7 @@ class Main {
         .addToContext("key" to "baseUrl")
         .addInputToContext()
         .urlText()
-        .addToContext("xPath" to "//div[@class='info-wrapper']//a")
+        .addToContext("AElementsXPath" to "//div[@class='info-wrapper']//a")
         .htmlFeed()
         .feedItemMap(
           AddFeedItemFieldToContextProducer(FeedItem.Field.Link, "baseUrl")
@@ -72,7 +72,10 @@ class Main {
             )
             .feedItemMapField(
               UrlTextProducer()
-                .addToContext("xPath" to "//div[@class='component--film-presentation d-flex flex-wrap']")
+                .addToContext(
+                  "xPath" to "//div[@class='group-info d-none d-md-block'][4]/p[2]",
+                  "extractText" to true,
+                )
                 .htmlCrop()
             )
         )
@@ -84,6 +87,7 @@ class Main {
           "atomTitle" to "UGC Culte",
           "atomDescription" to "UGC Culte",
           "atomLink" to ProducerContextReference("requestUrl"),
+          "atomEntriesAuthor" to "UGC",
         )
         .atom()
         .cache()

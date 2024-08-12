@@ -39,7 +39,7 @@ class HtmlFeedProducer : Producer<String, Feed> {
   override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, Feed>> {
     return runCatching {
       val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["xPath"]
+      val xPath: String = context["AElementsXPath"]
       val xPathEvaluator = Xsoup.compile(xPath)
 
       val document: Document = Jsoup.parse(input, baseUrl)
@@ -48,7 +48,7 @@ class HtmlFeedProducer : Producer<String, Feed> {
           title = aElement.text(),
           link = aElement.absUrl("href"),
           date = Instant.now(),
-          body = "",
+          body = null,
         )
       }
       context to Feed(items)
