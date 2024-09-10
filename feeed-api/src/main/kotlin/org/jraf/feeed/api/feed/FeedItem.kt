@@ -32,14 +32,14 @@ data class FeedItem(
   val link: String,
   val date: Instant,
   val body: String?,
-  val extras: Map<String, String> = emptyMap(),
+  val extras: Map<String, Any?> = emptyMap(),
 ) {
   sealed interface Field<T> {
     data object Title : Field<String>
     data object Link : Field<String>
     data object Date : Field<Instant>
     data object Body : Field<String?>
-    data class Extra(val name: String) : Field<Any?>
+    data class Extra<T>(val name: String) : Field<T>
   }
 
   operator fun <T> get(field: Field<T>): T {
@@ -59,7 +59,7 @@ data class FeedItem(
       Field.Link -> copy(link = value as String)
       Field.Date -> copy(date = value as Instant)
       Field.Body -> copy(body = value as String)
-      is Field.Extra -> copy(extras = extras + (field.name to value as String))
+      is Field.Extra -> copy(extras = extras + (field.name to value))
     }
   }
 }

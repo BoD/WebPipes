@@ -29,6 +29,7 @@ import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
 import org.jraf.feeed.engine.producer.core.pipe
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -39,7 +40,7 @@ class HtmlFeedProducer : Producer<String, Feed> {
   override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, Feed>> {
     return runCatching {
       val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["AElementsXPath"]
+      val xPath: String = context["aElementsXPath"]
       val xPathEvaluator = Xsoup.compile(xPath)
 
       val document: Document = Jsoup.parse(input, baseUrl)
@@ -58,6 +59,11 @@ class HtmlFeedProducer : Producer<String, Feed> {
   override fun close() {}
 }
 
-fun <IN> Producer<IN, String>.htmlFeed(): Producer<IN, Feed> {
-  return pipe(HtmlFeedProducer())
+fun <IN> Producer<IN, String>.htmlFeed(
+  baseUrl: String? = null,
+  aElementsXPath: String? = null,
+): Producer<IN, Feed> {
+  return addToContextIfNotNull("baseUrl", baseUrl)
+    .addToContextIfNotNull("aElementsXPath", aElementsXPath)
+    .pipe(HtmlFeedProducer())
 }

@@ -29,36 +29,31 @@ import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.api.producer.value
 import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
 import org.jraf.feeed.engine.producer.core.pipe
 
-class FeedItemMapFieldProducer<T>(
-  private val mapper: Producer<T, T>,
-) : Producer<FeedItem, FeedItem> {
+class FeedItemTextContainsProducer : Producer<FeedItem, FeedItem> {
   override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
-    val fieldIn: FeedItem.Field<T> = context["fieldIn"]
-    val fieldOut: FeedItem.Field<T> = context["fieldOut"]
+    val fieldIn: FeedItem.Field<String?> = context["fieldIn"]
+    val textToFind: String = context["textToFind"]
+    val fieldOut: FeedItem.Field<Boolean> = context["fieldOut"]
 
     return runCatching {
-      val fieldCurrentValue: T = input[fieldIn]
-      val fieldNewValue = mapper.produce(context, fieldCurrentValue).getOrThrow()
-      // Note: the mapped field's context is lost
-      context to input.with(fieldOut, fieldNewValue.value)
+      val fieldValue: String? = input[fieldIn]
+      context to input.with(fieldOut, fieldValue?.contains(textToFind, ignoreCase = true) == true)
     }
   }
 
-  override fun close() {
-    mapper.close()
-  }
+  override fun close() {}
 }
 
-fun <T> Producer<FeedItem, FeedItem>.feedItemMapField(
-  mapper: Producer<T, T>,
-  fieldIn: FeedItem.Field<out T?>? = null,
-  fieldOut: FeedItem.Field<out T?>? = null,
-): Producer<FeedItem, FeedItem> {
+fun <IN> Producer<IN, FeedItem>.feedItemTextContains(
+  fieldIn: FeedItem.Field<String?>? = null,
+  textToFind: String? = null,
+  fieldOut: FeedItem.Field<Boolean>? = null,
+): Producer<IN, FeedItem> {
   return addToContextIfNotNull("fieldIn", fieldIn)
+    .addToContextIfNotNull("textToFind", textToFind)
     .addToContextIfNotNull("fieldOut", fieldOut)
-    .pipe(FeedItemMapFieldProducer(mapper))
+    .pipe(FeedItemTextContainsProducer())
 }

@@ -27,6 +27,7 @@ package org.jraf.feeed.api.producer
 
 import okio.Closeable
 
+// TODO Should be called Transformer
 interface Producer<in IN, out OUT> : Closeable {
   suspend fun produce(context: ProducerContext, input: IN): Result<ProducerOutput<OUT>>
 }

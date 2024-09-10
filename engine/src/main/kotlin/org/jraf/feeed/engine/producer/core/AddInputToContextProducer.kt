@@ -40,6 +40,9 @@ class AddInputToContextProducer<T> : Producer<T, T> {
   override fun close() {}
 }
 
-fun <IN, OUT> Producer<IN, OUT>.addInputToContext(): Producer<IN, OUT> {
-  return pipe(AddInputToContextProducer())
+fun <IN, OUT> Producer<IN, OUT>.addInputToContext(
+  key: String? = null,
+): Producer<IN, OUT> {
+  return addToContextIfNotNull("key", key)
+    .pipe(AddInputToContextProducer())
 }

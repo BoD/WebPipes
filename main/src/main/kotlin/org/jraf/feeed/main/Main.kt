@@ -38,8 +38,10 @@ import org.jraf.feeed.engine.producer.core.addInputToContext
 import org.jraf.feeed.engine.producer.core.addToContext
 import org.jraf.feeed.engine.producer.core.cache
 import org.jraf.feeed.engine.producer.feed.AddFeedItemFieldToContextProducer
+import org.jraf.feeed.engine.producer.feed.feedFilter
 import org.jraf.feeed.engine.producer.feed.feedItemMap
 import org.jraf.feeed.engine.producer.feed.feedItemMapField
+import org.jraf.feeed.engine.producer.feed.feedItemTextContains
 import org.jraf.feeed.engine.producer.feed.feedMaxItems
 import org.jraf.feeed.engine.producer.feed.mergeFeeds
 import org.jraf.feeed.engine.producer.html.htmlCrop
@@ -59,37 +61,48 @@ class Main {
 
     val producer: Producer<String, String> =
       IdentityProducer<String>()
-        .addToContext("key" to "baseUrl")
-        .addInputToContext()
+        .addInputToContext(key = "baseUrl")
         .urlText()
-        .addToContext("AElementsXPath" to "//div[@class='info-wrapper']//a")
-        .htmlFeed()
+        .htmlFeed(aElementsXPath = "//div[@class='info-wrapper']//a")
         .feedItemMap(
           AddFeedItemFieldToContextProducer(FeedItem.Field.Link, "baseUrl")
-            .addToContext(
-              "fieldIn" to FeedItem.Field.Link,
-              "fieldOut" to FeedItem.Field.Body,
-            )
             .feedItemMapField(
-              UrlTextProducer()
+              mapper = UrlTextProducer(),
+              fieldIn = FeedItem.Field.Link,
+              fieldOut = FeedItem.Field.Body,
+            )
+        )
+        .feedItemMap(
+          IdentityProducer<FeedItem>()
+            .feedItemTextContains(
+              fieldIn = FeedItem.Field.Body,
+              textToFind = "lyon",
+              fieldOut = FeedItem.Field.Extra("isLyon"),
+            )
+        )
+        .feedFilter(FeedItem.Field.Extra("isLyon"))
+        .feedItemMap(
+          IdentityProducer<FeedItem>()
+            .feedItemMapField(
+              mapper = IdentityProducer<String>()
                 .addToContext(
                   "xPath" to "//div[@class='group-info d-none d-md-block'][4]/p[2]",
                   "extractText" to true,
                 )
-                .htmlCrop()
+                .htmlCrop(),
+              fieldIn = FeedItem.Field.Body,
+              fieldOut = FeedItem.Field.Body,
             )
         )
         .mergeFeeds()
         .feedMaxItems()
-        .addToContext("key" to "feed")
-        .addInputToContext()
-        .addToContext(
-          "atomTitle" to "UGC Culte",
-          "atomDescription" to "UGC Culte",
-          "atomLink" to ProducerContextReference("requestUrl"),
-          "atomEntriesAuthor" to "UGC",
+        .addInputToContext(key = "feed")
+        .addToContext("atomLink" to ProducerContextReference("requestUrl"))
+        .atom(
+          atomTitle = "UGC Culte",
+          atomDescription = "UGC Culte",
+          atomEntriesAuthor = "UGC",
         )
-        .atom()
         .cache()
 
     var context = ProducerContext()

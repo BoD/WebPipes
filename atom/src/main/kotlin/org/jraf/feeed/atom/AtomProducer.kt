@@ -35,6 +35,7 @@ import org.jraf.feeed.api.feed.FeedItem
 import org.jraf.feeed.api.producer.Producer
 import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
 import org.jraf.feeed.engine.producer.core.pipe
 import java.time.Instant
 import java.util.Date
@@ -67,7 +68,7 @@ class AtomProducer : Producer<Feed, String> {
             })
           }
           publishedDate = Date.from(feedItem.date)
-          author = feedItem[FeedItem.Field.Extra("author")] as? String? ?: context["atomEntriesAuthor", null]
+          author = feedItem[FeedItem.Field.Extra("author")] ?: context["atomEntriesAuthor", null]
         }
       }
       context to SyndFeedOutput().outputString(syndFeed)
@@ -77,6 +78,17 @@ class AtomProducer : Producer<Feed, String> {
   override fun close() {}
 }
 
-fun <IN> Producer<IN, Feed>.atom(): Producer<IN, String> {
-  return pipe(AtomProducer())
+fun <IN> Producer<IN, Feed>.atom(
+  atomTitle: String? = null,
+  atomDescription: String? = null,
+  atomLink: String? = null,
+  atomPublishedDate: Instant? = null,
+  atomEntriesAuthor: String? = null,
+): Producer<IN, String> {
+  return addToContextIfNotNull("atomTitle", atomTitle)
+    .addToContextIfNotNull("atomDescription", atomDescription)
+    .addToContextIfNotNull("atomLink", atomLink)
+    .addToContextIfNotNull("atomPublishedDate", atomPublishedDate)
+    .addToContextIfNotNull("atomEntriesAuthor", atomEntriesAuthor)
+    .pipe(AtomProducer())
 }
