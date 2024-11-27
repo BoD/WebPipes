@@ -13,9 +13,11 @@ dependencies {
   // Okio
   api(Square.okio)
 
+  // Json
+  api(KotlinX.serialization.json)
+
   // Logging
   implementation("org.slf4j:slf4j-api:_")
-  runtimeOnly("ch.qos.logback:logback-classic:_")
 
   // OKHttp
   implementation(Square.okHttp3)

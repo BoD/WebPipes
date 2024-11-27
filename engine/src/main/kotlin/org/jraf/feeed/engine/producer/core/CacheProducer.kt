@@ -30,7 +30,7 @@ import org.jraf.feeed.api.producer.ProducerContext
 import org.jraf.feeed.api.producer.ProducerOutput
 import org.jraf.feeed.api.producer.context
 import org.jraf.feeed.api.producer.value
-import org.jraf.feeed.engine.producer.UrlTextProducer
+import org.jraf.feeed.engine.producer.net.UrlTextProducer
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import kotlin.time.Duration

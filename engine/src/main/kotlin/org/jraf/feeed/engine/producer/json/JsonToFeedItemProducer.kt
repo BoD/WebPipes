@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,34 +23,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.main
+package org.jraf.feeed.engine.producer.json
 
-import org.jraf.feeed.main.bsky.produceBlueSky
-import org.jraf.feeed.main.ugc.produceUgc
-import org.jraf.feeed.server.Server
+import kotlinx.serialization.json.JsonElement
+import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.producer.Producer
+import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
+import org.jraf.feeed.engine.producer.core.pipe
 import org.slf4j.LoggerFactory
-import org.slf4j.simple.SimpleLogger
 
-class Main {
-  private val logger = LoggerFactory.getLogger(Main::class.java)
+private val logger = LoggerFactory.getLogger(JsonToFeedItemProducer::class.java)
 
-  fun start() {
-    logger.info("Starting server")
-    Server(
-      mapOf(
-        "ugc" to ::produceUgc,
-        "bluesky" to ::produceBlueSky,
-      ),
-    ).start()
+class JsonToFeedItemProducer : Producer<JsonElement, FeedItem> {
+  override suspend fun produce(context: ProducerContext, input: JsonElement): Result<Pair<ProducerContext, FeedItem>> {
+    return runCatching {
+      TODO()
+    }
   }
+
+  override fun close() {}
 }
 
-fun main() {
-  // This must be done before any logger is initialized
-  System.setProperty(SimpleLogger.LOG_FILE_KEY, "System.out")
-  System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "trace")
-  System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true")
-  System.setProperty(SimpleLogger.DATE_TIME_FORMAT_KEY, "yyyy-MM-dd HH:mm:ss")
-
-  Main().start()
-}
+fun <IN> Producer<IN, JsonElement>.toFeedItem(mapping: Map<String, FeedItem.Field<*>>): Producer<IN, FeedItem> =
+  addToContextIfNotNull("mapping", mapping)
+    .pipe(JsonToFeedItemProducer())

@@ -75,6 +75,10 @@ class ProducerContext private constructor(
     return ProducerContext(context + (key to value))
   }
 
+  fun without(key: String): ProducerContext {
+    return ProducerContext(context - key)
+  }
+
   operator fun plus(other: ProducerContext): ProducerContext {
     return ProducerContext(context + other.context)
   }

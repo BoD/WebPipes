@@ -31,11 +31,10 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.withCharset
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import io.ktor.server.plugins.callloging.CallLogging
+import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.statuspages.StatusPages
@@ -46,17 +45,17 @@ import io.ktor.server.request.uri
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import io.ktor.util.toMap
 import org.slf4j.event.Level
 
 private const val DEFAULT_PORT = 8042
 
 private const val ENV_PORT = "PORT"
 
-private const val PATH_A = "a"
-private const val PATH_B = "b"
+private const val PATH_PRODUCER_ID = "producerId"
 
 class Server(
-  private val producer: suspend (RequestParams) -> String,
+  private val producers: Map<String, suspend (RequestParams) -> String>,
 ) {
   fun start() {
     val listenPort = System.getenv(ENV_PORT)?.toInt() ?: DEFAULT_PORT
@@ -90,28 +89,30 @@ class Server(
     install(StatusPages) {
       status(HttpStatusCode.NotFound) { call, status ->
         call.respondText(
-          text = "Usage: ${call.request.local.scheme}://${call.request.local.host}:${call.request.local.port}/<a>/<b>\n\nSee https://github.com/BoD/feeed for more info.",
-          status = status
+          text = "Usage: ${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}/<a>/<b>\n\nSee https://github.com/BoD/feeed for more info.",
+          status = status,
         )
       }
     }
 
     routing {
-      get("{$PATH_A}/{$PATH_B}") {
-        val a = call.parameters[PATH_A]!!
-        val b = call.parameters[PATH_B]!!
+      get("{$PATH_PRODUCER_ID}") {
+        val producerId = call.parameters[PATH_PRODUCER_ID]!!
+        val producer = producers[producerId] ?: run {
+          call.response.status(HttpStatusCode.NotFound)
+          return@get
+        }
 
         val requestUrl = URLBuilder("${call.request.origin.scheme}://${call.request.host()}${call.portStr()}${call.request.uri}")
           .buildString()
-
         call.respondText(
           producer(
             RequestParams(
               requestUrl = requestUrl,
-              a = a,
-              b = b,
-            )
-          ), ContentType.Application.Atom.withCharset(Charsets.UTF_8)
+              queryParams = call.request.queryParameters.toMap().mapValues { it.value.first() },
+            ),
+          ),
+          ContentType.Application.Atom.withCharset(Charsets.UTF_8),
         )
       }
     }
@@ -120,9 +121,7 @@ class Server(
 
 data class RequestParams(
   val requestUrl: String,
-
-  val a: String,
-  val b: String,
+  val queryParams: Map<String, String>,
 )
 
 private fun ApplicationCall.portStr() = request.port().let { if (it == 80) "" else ":$it" }

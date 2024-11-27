@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,34 +23,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.main
+package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.main.bsky.produceBlueSky
-import org.jraf.feeed.main.ugc.produceUgc
-import org.jraf.feeed.server.Server
-import org.slf4j.LoggerFactory
-import org.slf4j.simple.SimpleLogger
+import org.jraf.feeed.api.producer.Producer
+import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.producer.ProducerOutput
 
-class Main {
-  private val logger = LoggerFactory.getLogger(Main::class.java)
-
-  fun start() {
-    logger.info("Starting server")
-    Server(
-      mapOf(
-        "ugc" to ::produceUgc,
-        "bluesky" to ::produceBlueSky,
-      ),
-    ).start()
+class SetResultProducer<IN, OUT : Any> : Producer<IN, OUT> {
+  override suspend fun produce(context: ProducerContext, input: IN): Result<ProducerOutput<OUT>> {
+    val newInput = context.get<Any>("result", "result") as OUT
+    return Result.success(context to newInput)
   }
+
+  override fun close() {}
 }
 
-fun main() {
-  // This must be done before any logger is initialized
-  System.setProperty(SimpleLogger.LOG_FILE_KEY, "System.out")
-  System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "trace")
-  System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true")
-  System.setProperty(SimpleLogger.DATE_TIME_FORMAT_KEY, "yyyy-MM-dd HH:mm:ss")
-
-  Main().start()
+fun <IN, OUT, RESULT : Any> Producer<IN, OUT>.setResult(result: RESULT?): Producer<IN, RESULT> {
+  return addToContextIfNotNull("result", result)
+    .pipe(SetResultProducer())
 }
