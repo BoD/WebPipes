@@ -50,9 +50,10 @@ class BlueSkyJsonToFeedProducer : Producer<List<JsonElement>, Feed> {
         val authorHandle = author.jsonObject["handle"]!!.string
         val authorDisplayName = author.jsonObject["displayName"]!!.string
         val postId = post["uri"]!!.string.substringAfterLast('/')
+        val link = "https://bsky.app/profile/${authorHandle}/post/${postId}"
         FeedItem(
-          title = "$authorDisplayName - ${record["text"]!!.string}",
-          link = "https://bsky.app/profile/${authorHandle}/post/${postId}",
+          title = "$authorDisplayName - $link",
+          link = link,
           date = Instant.parse(record["createdAt"]!!.string),
           body = null,
           extras = mapOf(
