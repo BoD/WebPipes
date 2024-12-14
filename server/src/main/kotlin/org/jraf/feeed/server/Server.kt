@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -89,7 +89,7 @@ class Server(
     install(StatusPages) {
       status(HttpStatusCode.NotFound) { call, status ->
         call.respondText(
-          text = "Usage: ${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}/<producer>\n\nSee https://github.com/BoD/feeed for more info.",
+          text = "Usage: ${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}/<step>\n\nSee https://github.com/BoD/feeed for more info.",
           status = status,
         )
       }

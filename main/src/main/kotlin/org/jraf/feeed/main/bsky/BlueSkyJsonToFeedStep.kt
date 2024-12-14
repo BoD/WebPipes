@@ -30,15 +30,16 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.pipe
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 import java.time.Instant
 
-class BlueSkyJsonToFeedProducer : Producer<List<JsonElement>, Feed> {
-  override suspend fun produce(context: ProducerContext, input: List<JsonElement>): Result<Pair<ProducerContext, Feed>> {
+class BlueSkyJsonToFeedStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val array: List<JsonElement> = context["array"]
     return runCatching {
-      val items = input.mapNotNull { jsonElement ->
+      val items = array.mapNotNull { jsonElement ->
         val obj = jsonElement.jsonObject
         val reply = obj["reply"]
         if (reply != null) {
@@ -61,15 +62,15 @@ class BlueSkyJsonToFeedProducer : Producer<List<JsonElement>, Feed> {
           ),
         )
       }
-      context to Feed(items)
+      context.with("feed", Feed(items))
     }
   }
 
   override fun close() {}
 }
 
-fun <IN> Producer<IN, List<JsonElement>>.blueSkyJsonToFeed(): Producer<IN, Feed> {
-  return pipe(BlueSkyJsonToFeedProducer())
+fun StepChain.blueSkyJsonToFeed(): StepChain {
+  return this + BlueSkyJsonToFeedStep()
 }
 
 private val JsonElement.string: String

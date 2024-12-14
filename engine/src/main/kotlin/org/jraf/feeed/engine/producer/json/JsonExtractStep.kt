@@ -23,26 +23,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.core
+package org.jraf.feeed.engine.producer.json
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
+import org.slf4j.LoggerFactory
 
-class AddInputToContextProducer<T> : Producer<T, T> {
-  override suspend fun produce(context: ProducerContext, input: T): Result<ProducerOutput<T>> {
+private val logger = LoggerFactory.getLogger(JsonExtractStep::class.java)
+
+class JsonExtractStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val json: JsonElement = context["json"]
+    val key: String = context["key", "key"]
     return runCatching {
-      val key: String = context["key", "value"]
-      context.with(key, input) to input
+      logger.debug("Extracting JSON key")
+      context.with("json", json.jsonObject[key]!!)
     }
   }
-
-  override fun close() {}
 }
 
-fun <IN, OUT> Producer<IN, OUT>.addInputToContext(
-  key: String? = null,
-): Producer<IN, OUT> {
-  return addToContextIfNotNull("key", key)
-    .pipe(AddInputToContextProducer())
+fun StepChain.jsonExtract(key: String?): StepChain {
+  return addToContextIfNotNull("key", key) +
+    JsonExtractStep()
 }

@@ -25,45 +25,29 @@
 
 package org.jraf.feeed.engine.producer.html
 
-import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-import org.jraf.feeed.engine.producer.core.pipe
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import us.codecraft.xsoup.Xsoup
-import java.time.Instant
 
-class HtmlFeedProducer : Producer<String, Feed> {
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, Feed>> {
+class HtmlCropStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
     return runCatching {
+      val text: String = context["text"]
       val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["aElementsXPath"]
+      val xPath: String = context["xPath"]
+      val extractText: Boolean = context["extractText", false]
       val xPathEvaluator = Xsoup.compile(xPath)
-
-      val document: Document = Jsoup.parse(input, baseUrl)
-      val items = xPathEvaluator.evaluate(document).elements.map { aElement ->
-        FeedItem(
-          title = aElement.text(),
-          link = aElement.absUrl("href"),
-          date = Instant.now(),
-          body = null,
-        )
-      }
-      context to Feed(items)
+      val document: Document = Jsoup.parse(text, baseUrl)
+      val element = xPathEvaluator.evaluate(document).elements.first()
+      val newText = (if (extractText) element?.text() else element?.outerHtml()) ?: ""
+      context.with("text", newText)
     }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, String>.htmlFeed(
-  baseUrl: String? = null,
-  aElementsXPath: String? = null,
-): Producer<IN, Feed> {
-  return addToContextIfNotNull("baseUrl", baseUrl)
-    .addToContextIfNotNull("aElementsXPath", aElementsXPath)
-    .pipe(HtmlFeedProducer())
+fun StepChain.htmlCrop(): StepChain {
+  return this + HtmlCropStep()
 }

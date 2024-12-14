@@ -23,9 +23,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api.producer
+package org.jraf.feeed.api.step
 
-class ProducerContext private constructor(
+class Context private constructor(
   private val context: Map<String, Any?>,
 ) {
   constructor() : this(emptyMap())
@@ -34,15 +34,6 @@ class ProducerContext private constructor(
     if (!context.containsKey(key)) {
       throw IllegalArgumentException("'$key' not found in context")
     }
-
-    val value = context[key]
-    if (value is ProducerContextReference) {
-      if (!context.containsKey(value.key)) {
-        throw IllegalArgumentException("'$key' references '${value.key}' which is not found in context")
-      }
-      return get(value.key)
-    }
-
     return getWithCast(key)
   }
 
@@ -50,15 +41,6 @@ class ProducerContext private constructor(
     if (!context.containsKey(key)) {
       return default
     }
-
-    val value = context[key]
-    if (value is ProducerContextReference) {
-      if (!context.containsKey(value.key)) {
-        return default
-      }
-      return get(value.key, default)
-    }
-
     return getWithCast(key)
   }
 
@@ -71,15 +53,23 @@ class ProducerContext private constructor(
     }
   }
 
-  fun with(key: String, value: Any?): ProducerContext {
-    return ProducerContext(context + (key to value))
+  fun with(key: String, value: Any?): Context {
+    return Context(context + (key to value))
   }
 
-  fun without(key: String): ProducerContext {
-    return ProducerContext(context - key)
+  fun without(key: String): Context {
+    return Context(context - key)
   }
 
-  operator fun plus(other: ProducerContext): ProducerContext {
-    return ProducerContext(context + other.context)
+  operator fun plus(other: Context): Context {
+    return Context(context + other.context)
+  }
+
+  fun allValues(): Map<String, Any?> {
+    return context
+  }
+
+  override fun toString(): String {
+    return "Context(context=$context)"
   }
 }

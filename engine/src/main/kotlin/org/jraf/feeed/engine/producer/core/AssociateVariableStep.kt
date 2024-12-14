@@ -23,30 +23,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.feed
+package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-import org.jraf.feeed.engine.producer.core.pipe
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
 
-class FeedFilterProducer : Producer<Feed, Feed> {
-  override suspend fun produce(context: ProducerContext, input: Feed): Result<ProducerOutput<Feed>> {
-    val field: FeedItem.Field<Boolean> = context["field"]
-    return runCatching {
-      context to input.copy(items = input.items.filter { it[field] })
-    }
+class AssociateVariableStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val existingVariableName: String = context["existingVariableName"]
+    val existingVariableValue: Any = context[existingVariableName]
+    val key: String = context["key", "key"]
+    return Result.success(context.with(key, mapOf(key to existingVariableValue)))
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, Feed>.feedFilter(
-  field: FeedItem.Field<Boolean>? = null,
-): Producer<IN, Feed> {
-  return addToContextIfNotNull("field", field)
-    .pipe(FeedFilterProducer())
+fun StepChain.associateVariable(
+  key: String? = null,
+  existingVariableName: String? = null,
+): StepChain {
+  return addToContextIfNotNull("key", key)
+    .addToContextIfNotNull("existingVariableName", existingVariableName) +
+    AssociateVariableStep()
 }

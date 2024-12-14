@@ -25,32 +25,36 @@
 
 package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
 
-class AddToContextProducer<T>(private val additionalContext: ProducerContext) : Producer<T, T> {
-  constructor(vararg additionalContext: Pair<String, Any?>) : this(additionalContext.fold(ProducerContext()) { acc, (key, value) ->
-    acc.with(
-      key,
-      value
-    )
-  })
+class AddToContextStep(private val additionalContext: Context) : Step {
+  constructor(vararg additionalContext: Pair<String, Any?>) : this(
+    additionalContext.fold(Context()) { acc, (key, value) ->
+      acc.with(
+        key,
+        value,
+      )
+    },
+  )
 
-  override suspend fun produce(context: ProducerContext, input: T): Result<Pair<ProducerContext, T>> {
-    return Result.success((context + additionalContext) to input)
+  override suspend fun execute(context: Context): Result<Context> {
+    return Result.success(context + additionalContext)
   }
-
-  override fun close() {}
 }
 
-fun <IN, OUT> Producer<IN, OUT>.addToContext(additionalContext: ProducerContext): Producer<IN, OUT> {
-  return pipe(AddToContextProducer(additionalContext))
+fun StepChain.addToContext(additionalContext: Context): StepChain {
+  return this + AddToContextStep(additionalContext)
 }
 
-fun <IN, OUT> Producer<IN, OUT>.addToContext(vararg additionalContext: Pair<String, Any?>): Producer<IN, OUT> {
-  return pipe(AddToContextProducer(*additionalContext))
+fun StepChain.addToContext(vararg additionalContext: Pair<String, Any?>): StepChain {
+  return this + AddToContextStep(*additionalContext)
 }
 
-fun <IN, OUT> Producer<IN, OUT>.addToContextIfNotNull(key: String, value: Any?): Producer<IN, OUT> {
+fun StepChain.addToContext(key: String, value: Any?): StepChain {
+  return addToContext(key to value)
+}
+
+fun StepChain.addToContextIfNotNull(key: String, value: Any?): StepChain {
   return if (value != null) addToContext(key to value) else this
 }

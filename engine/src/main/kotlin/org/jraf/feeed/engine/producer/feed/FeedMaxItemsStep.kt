@@ -25,18 +25,22 @@
 
 package org.jraf.feeed.engine.producer.feed
 
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.api.feed.Feed
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 
-class AddFeedItemFieldToContextProducer(
-  private val field: FeedItem.Field<*>,
-  private val contextItemName: String,
-) : Producer<FeedItem, FeedItem> {
-  override suspend fun produce(context: ProducerContext, input: FeedItem): Result<ProducerOutput<FeedItem>> {
-    return Result.success(context.with(contextItemName, input[field]) to input)
+class FeedMaxItemsStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    return runCatching {
+      val feed: Feed = context["feed"]
+      val maxItems: Int = context["maxItems", 30]
+      val items = feed.items.take(maxItems)
+      context.with("feed", feed.copy(items = items))
+    }
   }
+}
 
-  override fun close() {}
+fun StepChain.feedMaxItems(): StepChain {
+  return this + FeedMaxItemsStep()
 }

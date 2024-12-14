@@ -23,30 +23,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.feed
+package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.engine.producer.core.pipe
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.slf4j.LoggerFactory
 
-class MergeFeedsProducer : Producer<Feed, Feed> {
-  override suspend fun produce(context: ProducerContext, input: Feed): Result<ProducerOutput<Feed>> {
-    return runCatching {
-      val existingFeed: Feed = context["feed", Feed(emptyList())]
-      val merged = existingFeed.copy(
-        items = (existingFeed.items + input.items)
-          .distinctBy { it.link }
-          .sortedByDescending { it.date }
-      )
-      context to merged
-    }
+private val logger = LoggerFactory.getLogger(StepChain::class.java)
+
+class StepChain : Step {
+  private val steps = mutableListOf<Step>()
+
+  operator fun plus(step: Step): StepChain {
+    steps.add(step)
+    return this
   }
 
-  override fun close() {}
-}
+  override suspend fun execute(context: Context): Result<Context> {
+    var currentContext = context
+    for (step in steps) {
+      logger.debug("Executing step {}", step)
+      val result = step.execute(currentContext)
+      if (result.isFailure) {
+        return result
+      }
+      currentContext = result.getOrThrow()
+      logger.debug("Step {} executed successfully", step)
+    }
+    return Result.success(currentContext)
+  }
 
-fun <IN> Producer<IN, Feed>.mergeFeeds(): Producer<IN, Feed> {
-  return pipe(MergeFeedsProducer())
+  override fun close() {
+    for (step in steps) {
+      step.close()
+    }
+  }
 }

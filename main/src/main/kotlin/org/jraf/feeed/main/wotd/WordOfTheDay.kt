@@ -23,33 +23,58 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.main.wotd
+package org.jraf.feeed.main.ugc
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.context
-import org.jraf.feeed.api.producer.value
-import org.jraf.feeed.engine.producer.core.IdentityProducer
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.engine.producer.core.StepChain
+import org.jraf.feeed.engine.producer.core.addToContext
+import org.jraf.feeed.engine.producer.core.addVariableToContext
 import org.jraf.feeed.engine.producer.core.cache
+import org.jraf.feeed.engine.producer.html.htmlExtract
+import org.jraf.feeed.engine.producer.json.contextToJson
+import org.jraf.feeed.engine.producer.json.jsonFilterKeys
+import org.jraf.feeed.engine.producer.json.jsonToText
 import org.jraf.feeed.engine.producer.net.urlText
+import org.jraf.feeed.engine.producer.text.substring
 import org.jraf.feeed.server.RequestParams
 
-private val createSessionUrl = "https://www.merriam-webster.com/word-of-the-day"
+private val url = "https://www.merriam-webster.com/word-of-the-day"
 
-private val producer: Producer<String, String> =
-  IdentityProducer<String>()
+private val stepChain: StepChain =
+  StepChain()
+    .addToContext("baseUrl", url)
     .urlText()
+    .htmlExtract(variableName = "word", xPath = "//h2[@class='word-header-txt']")
+    .htmlExtract(variableName = "type", xPath = "//span[@class='main-attr']")
+    .htmlExtract(variableName = "pronunciation", xPath = "//span[@class='word-syllables']")
+    .htmlExtract(variableName = "definition", xPath = "//div[@class='wod-definition-container']/p[1]")
+    .htmlExtract(variableName = "inContext", xPath = "//div[@class='wotd-examples']/div[1]/p[1]")
+    .htmlExtract(variableName = "text", xPath = "//div[@class='wod-definition-container']/p[2]")
+    .substring(startIndex = 3)
+    .addVariableToContext(newVariableName = "example", existingVariableName = "text")
+    .contextToJson()
+    .jsonFilterKeys(
+      listOf(
+        "word",
+        "type",
+        "pronunciation",
+        "definition",
+        "example",
+        "inContext",
+      ),
+    )
+    .jsonToText()
     .cache()
 
-private var context = ProducerContext()
+private var context = Context()
 
 suspend fun produceWordOfTheDay(requestParams: RequestParams): String {
-  val output = producer
-    .produce(
-      context,
-      createSessionUrl,
+  context = stepChain
+    .execute(
+      context
+        .with("requestUrl", requestParams.requestUrl)
+        .with("url", url),
     )
     .getOrThrow()
-  context = output.context
-  return output.value.toString()
+  return context["text"]
 }

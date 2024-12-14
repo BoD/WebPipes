@@ -23,22 +23,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.text
+package org.jraf.feeed.engine.producer.json
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-import org.jraf.feeed.engine.producer.core.pipe
 
-class PrefixProducer : Producer<String, String> {
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, String>> {
-    val prefix: String = context["prefix", "prefix"]
-    return Result.success(context to prefix + input)
+class JsonFilterKeysStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    return runCatching {
+      val allowedKeys: List<String> = context["allowedKeys", emptyList()]
+      val jsonElement = buildJsonObject {
+        val jsonObject: JsonObject = context["json"]
+        for ((key, value) in jsonObject) {
+          if (key in allowedKeys) {
+            put(key, value)
+          }
+        }
+      }
+      context.with("json", jsonElement)
+    }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, String>.prefix(prefix: String?): Producer<IN, String> {
-  return addToContextIfNotNull("prefix", prefix).pipe(PrefixProducer())
-}
+fun StepChain.jsonFilterKeys(
+  allowedKeys: List<String>? = null,
+): StepChain =
+  addToContextIfNotNull("allowedKeys", allowedKeys) +
+    JsonFilterKeysStep()

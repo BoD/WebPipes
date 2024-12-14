@@ -25,20 +25,22 @@
 
 package org.jraf.feeed.engine.producer.json
 
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonPrimitive
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.pipe
+import kotlinx.serialization.json.Json
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
+import org.slf4j.LoggerFactory
 
-class JsonPrimitiveProducer : Producer<JsonElement, String> {
-  override suspend fun produce(context: ProducerContext, input: JsonElement): Result<Pair<ProducerContext, String>> {
-    return Result.success(context to input.jsonPrimitive.content)
+private val logger = LoggerFactory.getLogger(JsonStep::class.java)
+
+class JsonStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    return runCatching {
+      logger.debug("Parsing JSON")
+      val text: String = context["text"]
+      context.with("json", Json.parseToJsonElement(text))
+    }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, JsonElement>.asPrimitive(): Producer<IN, String> {
-  return pipe(JsonPrimitiveProducer())
-}
+fun StepChain.json(): StepChain = this + JsonStep()

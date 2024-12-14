@@ -25,31 +25,46 @@
 
 package org.jraf.feeed.engine.producer.html
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.engine.producer.core.pipe
+import org.jraf.feeed.api.feed.Feed
+import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import us.codecraft.xsoup.Xsoup
+import java.time.Instant
 
-class HtmlCropProducer : Producer<String, String> {
-  override suspend fun produce(context: ProducerContext, input: String): Result<ProducerOutput<String>> {
+class HtmlFeedStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
     return runCatching {
       val baseUrl: String = context["baseUrl"]
-      val xPath: String = context["xPath"]
-      val extractText: Boolean = context["extractText", false]
+      val xPath: String = context["aElementsXPath"]
       val xPathEvaluator = Xsoup.compile(xPath)
-      val document: Document = Jsoup.parse(input, baseUrl)
-      val element = xPathEvaluator.evaluate(document).elements.first()
-      val text = (if (extractText) element?.text() else element?.outerHtml()) ?: ""
-      context to text
+      val text: String = context["text"]
+
+      val document: Document = Jsoup.parse(text, baseUrl)
+      val items = xPathEvaluator.evaluate(document).elements.map { aElement ->
+        FeedItem(
+          title = aElement.text(),
+          link = aElement.absUrl("href"),
+          date = Instant.now(),
+          body = null,
+        )
+      }
+      context.with("feed", Feed(items))
     }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, String>.htmlCrop(): Producer<IN, String> {
-  return pipe(HtmlCropProducer())
+fun StepChain.htmlFeed(
+  text: String? = null,
+  baseUrl: String? = null,
+  aElementsXPath: String? = null,
+): StepChain {
+  return addToContextIfNotNull("text", text)
+    .addToContextIfNotNull("baseUrl", baseUrl)
+    .addToContextIfNotNull("aElementsXPath", aElementsXPath) +
+    HtmlFeedStep()
 }

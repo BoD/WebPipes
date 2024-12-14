@@ -23,22 +23,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.core
+package org.jraf.feeed.engine.producer.json
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonArray
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 
-class SetResultProducer<IN, OUT : Any> : Producer<IN, OUT> {
-  override suspend fun produce(context: ProducerContext, input: IN): Result<ProducerOutput<OUT>> {
-    val newInput = context.get<Any>("result", "result") as OUT
-    return Result.success(context to newInput)
+class JsonArrayStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val json: JsonElement = context["json"]
+    return Result.success(context.with("array", json.jsonArray))
   }
-
-  override fun close() {}
 }
 
-fun <IN, OUT, RESULT : Any> Producer<IN, OUT>.setResult(result: RESULT?): Producer<IN, RESULT> {
-  return addToContextIfNotNull("result", result)
-    .pipe(SetResultProducer())
+fun StepChain.jsonArray(): StepChain {
+  return this + JsonArrayStep()
 }

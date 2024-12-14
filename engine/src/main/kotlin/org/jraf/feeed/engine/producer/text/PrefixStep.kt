@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -23,16 +23,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api.producer
+package org.jraf.feeed.engine.producer.text
 
-import okio.Closeable
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
 
-// TODO Should be called Transformer
-interface Producer<in IN, out OUT> : Closeable {
-  suspend fun produce(context: ProducerContext, input: IN): Result<ProducerOutput<OUT>>
+
+class PrefixStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val text: String = context["text"]
+    val prefix: String = context["prefix", "prefix"]
+    return Result.success(context.with("text", prefix + text))
+  }
 }
 
-typealias ProducerOutput<T> = Pair<ProducerContext, T>
-
-inline val <T> ProducerOutput<T>.context get() = first
-inline val <T> ProducerOutput<T>.value get() = second
+fun StepChain.prefix(prefix: String? = null): StepChain {
+  return addToContextIfNotNull("prefix", prefix) +
+    PrefixStep()
+}

@@ -23,19 +23,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.core
+package org.jraf.feeed.engine.producer.text
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
 
-class RemoveFromContextProducer<T>(private val key: String) : Producer<T, T> {
-  override suspend fun produce(context: ProducerContext, input: T): Result<Pair<ProducerContext, T>> {
-    return Result.success((context.without(key)) to input)
+class SubstringStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val text: String = context["text"]
+    val startIndex: Int = context["startIndex", 0]
+    val endIndex: Int? = context["endIndex", null]
+    return Result.success(context.with("text", if (endIndex == null) text.substring(startIndex) else text.substring(startIndex, endIndex)))
   }
-
-  override fun close() {}
 }
 
-fun <IN, OUT> Producer<IN, OUT>.removeFromContext(key: String): Producer<IN, OUT> {
-  return pipe(RemoveFromContextProducer(key))
+fun StepChain.substring(
+  startIndex: Int? = null,
+  endIndex: Int? = null,
+): StepChain {
+  return addToContextIfNotNull("startIndex", startIndex)
+    .addToContextIfNotNull("endIndex", endIndex) +
+    SubstringStep()
 }

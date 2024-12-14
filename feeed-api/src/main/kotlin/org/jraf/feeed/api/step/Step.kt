@@ -23,16 +23,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.core
+package org.jraf.feeed.api.step
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
+import okio.Closeable
 
-class IdentityProducer<T> : Producer<T, T> {
-  override suspend fun produce(context: ProducerContext, input: T): Result<ProducerOutput<T>> {
-    return Result.success(context to input)
-  }
-
+interface Step : Closeable {
+  suspend fun execute(context: Context): Result<Context>
   override fun close() {}
 }

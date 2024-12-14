@@ -23,26 +23,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.json
+package org.jraf.feeed.engine.producer.feed
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.pipe
-import org.slf4j.LoggerFactory
+import org.jraf.feeed.api.feed.Feed
+import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
+import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
 
-private val logger = LoggerFactory.getLogger(JsonProducer::class.java)
-
-class JsonProducer : Producer<String, JsonElement> {
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, JsonElement>> {
+class FeedFilterStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val feed: Feed = context["feed"]
+    val field: FeedItem.Field<Boolean> = context["field"]
     return runCatching {
-      logger.debug("Parsing JSON")
-      context to Json.parseToJsonElement(input)
+      context.with("feed", feed.copy(items = feed.items.filter { it[field] }))
     }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, String>.json(): Producer<IN, JsonElement> = this.pipe(JsonProducer())
+fun StepChain.feedFilter(
+  field: FeedItem.Field<Boolean>? = null,
+): StepChain {
+  return addToContextIfNotNull("field", field) +
+    FeedFilterStep()
+}

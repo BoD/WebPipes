@@ -25,27 +25,16 @@
 
 package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.context
-import org.jraf.feeed.api.producer.value
-
-class PipeProducer<IN, SHARED, OUT>(
-  private val upstreamProducer: Producer<IN, SHARED>,
-  private val downstreamProducer: Producer<SHARED, OUT>,
-) : Producer<IN, OUT> {
-
-  override suspend fun produce(context: ProducerContext, input: IN): Result<Pair<ProducerContext, OUT>> {
-    return upstreamProducer.produce(context, input)
-      .mapCatching { output -> downstreamProducer.produce(output.context, output.value).getOrThrow() }
-  }
-
-  override fun close() {
-    upstreamProducer.close()
-    downstreamProducer.close()
-  }
-}
-
-fun <IN, SHARED, OUT> Producer<IN, SHARED>.pipe(downstreamProducer: Producer<SHARED, OUT>): Producer<IN, OUT> {
-  return PipeProducer(this, downstreamProducer)
-}
+//class SetResultStep<IN, OUT : Any> : Step<IN, OUT> {
+//  override suspend fun produce(context: Context, input: IN): Result<ProducerOutput<OUT>> {
+//    val newInput = context.get<Any>("result", "result") as OUT
+//    return Result.success(context to newInput)
+//  }
+//
+//  override fun close() {}
+//}
+//
+//fun <IN, OUT, RESULT : Any> Step<IN, OUT>.setResult(result: RESULT?): Step<IN, RESULT> {
+//  return addToContextIfNotNull("result", result)
+//    .pipe(SetResultStep())
+//}

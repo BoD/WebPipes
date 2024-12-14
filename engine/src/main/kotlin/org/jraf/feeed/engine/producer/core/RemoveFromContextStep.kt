@@ -23,26 +23,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.feed
+package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.engine.producer.core.pipe
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
 
-class FeedMaxItemsProducer : Producer<Feed, Feed> {
-  override suspend fun produce(context: ProducerContext, input: Feed): Result<ProducerOutput<Feed>> {
-    return runCatching {
-      val maxItems: Int = context["maxItems", 30]
-      val items = input.items.take(maxItems)
-      context to input.copy(items = items)
-    }
+class RemoveFromContextStep(private val key: String) : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    return Result.success(context.without(key))
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, Feed>.feedMaxItems(): Producer<IN, Feed> {
-  return pipe(FeedMaxItemsProducer())
+fun StepChain.removeFromContext(key: String): StepChain {
+  return this + RemoveFromContextStep(key)
 }

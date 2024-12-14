@@ -25,20 +25,25 @@
 
 package org.jraf.feeed.engine.producer.core
 
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
 
-class AssociateProducer<T, K : Any> : Producer<T, Map<K, T>> {
-  override suspend fun produce(context: ProducerContext, input: T): Result<ProducerOutput<Map<K, T>>> {
-    val key: K = context.get<Any>("key", "key") as K
-    return Result.success(context to mapOf(key to input))
+class AddVariableToContextStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    return runCatching {
+      val existingVariableName: String = context["existingVariableName"]
+      val existingVariableValue: Any = context[existingVariableName]
+      val newVariableName: String = context["newVariableName"]
+      context.with(newVariableName, existingVariableValue)
+    }
   }
-
-  override fun close() {}
 }
 
-fun <IN, OUT, K : Any> Producer<IN, OUT>.associate(key: K?): Producer<IN, Map<K, OUT>> {
-  return addToContextIfNotNull("key", key)
-    .pipe(AssociateProducer())
+fun StepChain.addVariableToContext(
+  newVariableName: String? = null,
+  existingVariableName: String? = null,
+): StepChain {
+  return addToContextIfNotNull("newVariableName", newVariableName)
+    .addToContextIfNotNull("existingVariableName", existingVariableName) +
+    AddVariableToContextStep()
 }

@@ -26,27 +26,18 @@
 package org.jraf.feeed.engine.producer.json
 
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-import org.jraf.feeed.engine.producer.core.pipe
-import org.slf4j.LoggerFactory
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 
-private val logger = LoggerFactory.getLogger(JsonExtractProducer::class.java)
-
-class JsonExtractProducer : Producer<JsonElement, JsonElement> {
-  override suspend fun produce(context: ProducerContext, input: JsonElement): Result<Pair<ProducerContext, JsonElement>> {
-    val key: String = context["key", "key"]
+class JsonToTextStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
     return runCatching {
-      logger.debug("Extracting JSON key")
-      context to input.jsonObject[key]!!
+      val jsonElement: JsonElement = context["json"]
+      val text = jsonElement.toString()
+      context.with("text", text)
     }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, JsonElement>.extract(key: String?): Producer<IN, JsonElement> {
-  return addToContextIfNotNull("key", key).pipe(JsonExtractProducer())
-}
+fun StepChain.jsonToText(): StepChain = this + JsonToTextStep()

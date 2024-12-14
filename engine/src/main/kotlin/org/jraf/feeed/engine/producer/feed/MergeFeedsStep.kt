@@ -23,28 +23,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.producer.json
+package org.jraf.feeed.engine.producer.feed
 
-import kotlinx.serialization.json.JsonElement
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-import org.jraf.feeed.engine.producer.core.pipe
-import org.slf4j.LoggerFactory
+import org.jraf.feeed.api.feed.Feed
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 
-private val logger = LoggerFactory.getLogger(JsonToFeedItemProducer::class.java)
-
-class JsonToFeedItemProducer : Producer<JsonElement, FeedItem> {
-  override suspend fun produce(context: ProducerContext, input: JsonElement): Result<Pair<ProducerContext, FeedItem>> {
+class MergeFeedsStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
     return runCatching {
-      TODO()
+      val feed: Feed = context["feed"]
+      val existingFeed: Feed = context["existingFeed", Feed(emptyList())]
+      val merged = existingFeed.copy(
+        items = (existingFeed.items + feed.items)
+          .distinctBy { it.link }
+          .sortedByDescending { it.date },
+      )
+      context.with("feed", merged)
     }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, JsonElement>.toFeedItem(mapping: Map<String, FeedItem.Field<*>>): Producer<IN, FeedItem> =
-  addToContextIfNotNull("mapping", mapping)
-    .pipe(JsonToFeedItemProducer())
+fun StepChain.mergeFeeds(): StepChain {
+  return this + MergeFeedsStep()
+}

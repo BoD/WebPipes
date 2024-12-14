@@ -23,9 +23,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api.feed
+package org.jraf.feeed.engine.producer.json
 
-data class Feed(
-  val items: List<FeedItem>,
-)
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 
+class ContextToJsonStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    return runCatching {
+      val jsonElement = buildJsonObject {
+        for ((key, value) in context.allValues()) {
+          when (value) {
+            is String -> put(key, value)
+            is Number -> put(key, value)
+            is Boolean -> put(key, value)
+            else -> throw IllegalArgumentException("Unsupported type: ${value}")
+          }
+        }
+      }
+      context.with("json", jsonElement)
+    }
+  }
+}
+
+fun StepChain.contextToJson(): StepChain = this + ContextToJsonStep()

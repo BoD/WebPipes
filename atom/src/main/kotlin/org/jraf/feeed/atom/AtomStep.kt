@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -32,18 +32,17 @@ import com.rometools.rome.feed.synd.SyndFeedImpl
 import com.rometools.rome.io.SyndFeedOutput
 import org.jraf.feeed.api.feed.Feed
 import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-import org.jraf.feeed.engine.producer.core.pipe
 import java.time.Instant
 import java.util.Date
 
-
-class AtomProducer : Producer<Feed, String> {
-  override suspend fun produce(context: ProducerContext, input: Feed): Result<ProducerOutput<String>> {
+class AtomStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
     return runCatching {
+      val feed: Feed = context["feed"]
       val atomTitle: String = context["atomTitle"]
       val atomDescription: String = context["atomDescription"]
       val atomLink: String = context["atomLink"]
@@ -55,40 +54,40 @@ class AtomProducer : Producer<Feed, String> {
       syndFeed.description = atomDescription
       syndFeed.link = atomLink
       syndFeed.uri = atomLink
-      syndFeed.publishedDate = atomPublishedDate?.let { Date.from(it) } ?: Date.from(input.items.maxOf { it.date })
-      syndFeed.entries = input.items.map { feedItem ->
+      syndFeed.publishedDate = atomPublishedDate?.let { Date.from(it) } ?: Date.from(feed.items.maxOf { it.date })
+      syndFeed.entries = feed.items.map { feedItem ->
         SyndEntryImpl().apply {
           title = feedItem.title
           link = feedItem.link
           uri = feedItem.link
           feedItem.body?.let { body ->
-            contents = listOf(SyndContentImpl().apply {
-              type = "text/html"
-              value = body
-            })
+            contents = listOf(
+              SyndContentImpl().apply {
+                type = "text/html"
+                value = body
+              },
+            )
           }
           publishedDate = Date.from(feedItem.date)
           author = feedItem[FeedItem.Field.Extra("author")] ?: context["atomEntriesAuthor", null]
         }
       }
-      context to SyndFeedOutput().outputString(syndFeed)
+      context.with("text", SyndFeedOutput().outputString(syndFeed))
     }
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, Feed>.atom(
+fun StepChain.atom(
   atomTitle: String? = null,
   atomDescription: String? = null,
   atomLink: String? = null,
   atomPublishedDate: Instant? = null,
   atomEntriesAuthor: String? = null,
-): Producer<IN, String> {
+): StepChain {
   return addToContextIfNotNull("atomTitle", atomTitle)
     .addToContextIfNotNull("atomDescription", atomDescription)
     .addToContextIfNotNull("atomLink", atomLink)
     .addToContextIfNotNull("atomPublishedDate", atomPublishedDate)
-    .addToContextIfNotNull("atomEntriesAuthor", atomEntriesAuthor)
-    .pipe(AtomProducer())
+    .addToContextIfNotNull("atomEntriesAuthor", atomEntriesAuthor) +
+    AtomStep()
 }

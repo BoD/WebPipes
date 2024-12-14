@@ -1,5 +1,5 @@
 /*
- * This producer is part of the
+ * This source is part of the
  *      _____  ___   ____
  *  __ / / _ \/ _ | / __/___  _______ _
  * / // / , _/ __ |/ _/_/ _ \/ __/ _ `/
@@ -27,7 +27,7 @@ package org.jraf.feeed.main
 
 import org.jraf.feeed.main.bsky.produceBlueSky
 import org.jraf.feeed.main.ugc.produceUgc
-import org.jraf.feeed.main.wotd.produceWordOfTheDay
+import org.jraf.feeed.main.ugc.produceWordOfTheDay
 import org.jraf.feeed.server.Server
 import org.slf4j.LoggerFactory
 import org.slf4j.simple.SimpleLogger

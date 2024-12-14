@@ -23,6 +23,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api.producer
+package org.jraf.feeed.engine.producer.feed
 
-data class ProducerContextReference(val key: String)
+import org.jraf.feeed.api.feed.FeedItem
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
+
+class AddFeedItemFieldToContextStep(
+  private val contextItemName: String,
+  private val field: FeedItem.Field<*>,
+) : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val feedItem: FeedItem = context["feedItem"]
+    return Result.success(context.with(contextItemName, feedItem[field]))
+  }
+}
+
+fun StepChain.addFeedItemFieldToContext(
+  contextItemName: String,
+  field: FeedItem.Field<*>,
+): StepChain {
+  return this + AddFeedItemFieldToContextStep(contextItemName, field)
+}

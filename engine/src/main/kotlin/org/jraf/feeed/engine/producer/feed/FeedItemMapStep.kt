@@ -32,28 +32,29 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerOutput
-import org.jraf.feeed.api.producer.value
-import org.jraf.feeed.engine.producer.core.pipe
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 
-class FeedItemMapProducer(
-  private val mapper: Producer<FeedItem, FeedItem>,
-) : Producer<Feed, Feed> {
-
+class FeedItemMapStep(
+  private val mapper: Step,
+) : Step {
   private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-  override suspend fun produce(context: ProducerContext, input: Feed): Result<Pair<ProducerContext, Feed>> {
+  override suspend fun execute(context: Context): Result<Context> {
+    val feed: Feed = context["feed"]
     return runCatching {
-      val asyncResults: List<Deferred<Result<ProducerOutput<FeedItem>>>> =
-        input.items.map { feedItem -> coroutineScope.async { mapper.produce(context, feedItem) } }
-      context to input.copy(
-        items = List(input.items.size) { i ->
-          // Note: the mapped item's context is lost
-          asyncResults[i].await().getOrThrow().value
-        }
+      val asyncResults: List<Deferred<Result<Context>>> =
+        feed.items.map { feedItem -> coroutineScope.async { mapper.execute(context.with("feedItem", feedItem)) } }
+
+      context.with(
+        "feed",
+        feed.copy(
+          items = List(feed.items.size) { i ->
+            // Note: the mapped item's context is lost
+            asyncResults[i].await().getOrThrow()["feedItem"]
+          },
+        ),
       )
     }
   }
@@ -64,6 +65,6 @@ class FeedItemMapProducer(
   }
 }
 
-fun <IN> Producer<IN, Feed>.feedItemMap(mapper: Producer<FeedItem, FeedItem>): Producer<IN, Feed> {
-  return pipe(FeedItemMapProducer(mapper))
+fun StepChain.feedItemMap(mapper: Step): StepChain {
+  return this + FeedItemMapStep(mapper)
 }

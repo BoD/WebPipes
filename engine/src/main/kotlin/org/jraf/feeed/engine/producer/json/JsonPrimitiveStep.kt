@@ -26,19 +26,18 @@
 package org.jraf.feeed.engine.producer.json
 
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonArray
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.engine.producer.core.pipe
+import kotlinx.serialization.json.jsonPrimitive
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 
-class JsonArrayProducer : Producer<JsonElement, List<JsonElement>> {
-  override suspend fun produce(context: ProducerContext, input: JsonElement): Result<Pair<ProducerContext, List<JsonElement>>> {
-    return Result.success(context to input.jsonArray)
+class JsonPrimitiveStep : Step {
+  override suspend fun execute(context: Context): Result<Context> {
+    val json: JsonElement = context["json"]
+    return Result.success(context.with("text", json.jsonPrimitive.content))
   }
-
-  override fun close() {}
 }
 
-fun <IN> Producer<IN, JsonElement>.asArray(): Producer<IN, List<JsonElement>> {
-  return pipe(JsonArrayProducer())
+fun StepChain.jsonPrimitive(): StepChain {
+  return this + JsonPrimitiveStep()
 }

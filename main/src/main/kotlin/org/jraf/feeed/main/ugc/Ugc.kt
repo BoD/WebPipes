@@ -26,17 +26,13 @@
 package org.jraf.feeed.main.ugc
 
 import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
-import org.jraf.feeed.api.producer.ProducerContextReference
-import org.jraf.feeed.api.producer.context
-import org.jraf.feeed.api.producer.value
+import org.jraf.feeed.api.step.Context
 import org.jraf.feeed.atom.atom
-import org.jraf.feeed.engine.producer.core.IdentityProducer
-import org.jraf.feeed.engine.producer.core.addInputToContext
+import org.jraf.feeed.engine.producer.core.StepChain
 import org.jraf.feeed.engine.producer.core.addToContext
+import org.jraf.feeed.engine.producer.core.addVariableToContext
 import org.jraf.feeed.engine.producer.core.cache
-import org.jraf.feeed.engine.producer.feed.AddFeedItemFieldToContextProducer
+import org.jraf.feeed.engine.producer.feed.addFeedItemFieldToContext
 import org.jraf.feeed.engine.producer.feed.feedFilter
 import org.jraf.feeed.engine.producer.feed.feedItemMap
 import org.jraf.feeed.engine.producer.feed.feedItemMapField
@@ -45,28 +41,31 @@ import org.jraf.feeed.engine.producer.feed.feedMaxItems
 import org.jraf.feeed.engine.producer.feed.mergeFeeds
 import org.jraf.feeed.engine.producer.html.htmlCrop
 import org.jraf.feeed.engine.producer.html.htmlFeed
-import org.jraf.feeed.engine.producer.net.UrlTextProducer
+import org.jraf.feeed.engine.producer.net.UrlTextStep
 import org.jraf.feeed.engine.producer.net.urlText
 import org.jraf.feeed.server.RequestParams
 
 private val url =
   "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
 
-private val producer: Producer<String, String> =
-  IdentityProducer<String>()
-    .addInputToContext(key = "baseUrl")
+private val stepChain: StepChain =
+  StepChain()
+    .addToContext("baseUrl", url)
     .urlText()
     .htmlFeed(aElementsXPath = "//div[@class='info-wrapper']//a")
     .feedItemMap(
-      AddFeedItemFieldToContextProducer(FeedItem.Field.Link, "baseUrl")
+      StepChain()
+        .addFeedItemFieldToContext("baseUrl", FeedItem.Field.Link)
         .feedItemMapField(
-          mapper = UrlTextProducer(),
+          mapper = UrlTextStep(),
           fieldIn = FeedItem.Field.Link,
+          fieldInVariableName = "url",
           fieldOut = FeedItem.Field.Body,
+          fieldOutVariableName = "text",
         ),
     )
     .feedItemMap(
-      IdentityProducer<FeedItem>()
+      StepChain()
         .feedItemTextContains(
           fieldIn = FeedItem.Field.Body,
           textToFind = "lyon",
@@ -75,22 +74,24 @@ private val producer: Producer<String, String> =
     )
     .feedFilter(FeedItem.Field.Extra("isLyon"))
     .feedItemMap(
-      IdentityProducer<FeedItem>()
+      StepChain()
         .feedItemMapField(
-          mapper = IdentityProducer<String>()
+          mapper = StepChain()
             .addToContext(
               "xPath" to "//div[@class='group-info d-none d-md-block'][4]/p[2]",
               "extractText" to true,
             )
             .htmlCrop(),
           fieldIn = FeedItem.Field.Body,
+          fieldInVariableName = "text",
           fieldOut = FeedItem.Field.Body,
+          fieldOutVariableName = "text",
         ),
     )
     .mergeFeeds()
     .feedMaxItems()
-    .addInputToContext(key = "feed")
-    .addToContext("atomLink" to ProducerContextReference("requestUrl"))
+    .addVariableToContext(newVariableName = "existingFeed", existingVariableName = "feed")
+    .addVariableToContext(newVariableName = "atomLink", existingVariableName = "requestUrl")
     .atom(
       atomTitle = "UGC Culte",
       atomDescription = "UGC Culte",
@@ -98,15 +99,15 @@ private val producer: Producer<String, String> =
     )
     .cache()
 
-private var context = ProducerContext()
+private var context = Context()
 
 suspend fun produceUgc(requestParams: RequestParams): String {
-  val output = producer
-    .produce(
-      context.with("requestUrl", requestParams.requestUrl),
-      url,
+  context = stepChain
+    .execute(
+      context
+        .with("requestUrl", requestParams.requestUrl)
+        .with("url", url),
     )
     .getOrThrow()
-  context = output.context
-  return output.value
+  return context["text"]
 }

@@ -30,21 +30,21 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import org.jraf.feeed.api.producer.Producer
-import org.jraf.feeed.api.producer.ProducerContext
+import org.jraf.feeed.api.step.Context
+import org.jraf.feeed.api.step.Step
+import org.jraf.feeed.engine.producer.core.StepChain
 import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-import org.jraf.feeed.engine.producer.core.pipe
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-private val logger = LoggerFactory.getLogger(UrlTextProducer::class.java)
+private val logger = LoggerFactory.getLogger(UrlTextStep::class.java)
 
-class UrlTextProducer : Producer<String, String> {
+class UrlTextStep : Step {
   private val httpClient = OkHttpClient.Builder().build()
 
-  override suspend fun produce(context: ProducerContext, input: String): Result<Pair<ProducerContext, String>> {
-    val url = context["url", input]
+  override suspend fun execute(context: Context): Result<Context> {
+    val url: String = context["url"]
     logger.debug("Fetching {}", url)
     val request = Request.Builder()
       .url(url)
@@ -75,13 +75,13 @@ class UrlTextProducer : Producer<String, String> {
         }
       }
     } catch (e: Exception) {
-      logger.error("Failed to fetch $input", e)
+      logger.error("Failed to fetch $url", e)
       return Result.failure(e)
     }
 
     return response.use { resp ->
-      val body = resp.body?.string() ?: return Result.failure(Exception("Failed to fetch $input: empty body"))
-      Result.success(context to body)
+      val body = resp.body?.string() ?: return Result.failure(Exception("Failed to fetch $url: empty body"))
+      Result.success(context.with("text", body))
     }
   }
 
@@ -91,12 +91,11 @@ class UrlTextProducer : Producer<String, String> {
   }
 }
 
-fun <IN> Producer<IN, String>.urlText(
+fun StepChain.urlText(
   url: String? = null,
   body: String? = null,
   headers: Map<String, String>? = null,
-): Producer<IN, String> =
-  addToContextIfNotNull("url", url)
-    .addToContextIfNotNull("body", body)
-    .addToContextIfNotNull("headers", headers)
-    .pipe(UrlTextProducer())
+): StepChain = addToContextIfNotNull("url", url)
+  .addToContextIfNotNull("body", body)
+  .addToContextIfNotNull("headers", headers) +
+  UrlTextStep()
