@@ -23,12 +23,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.json
 
-import kotlinx.serialization.json.JsonObject
-import okio.Closeable
-
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
-}
+//import kotlinx.serialization.json.JsonElement
+//import kotlinx.serialization.json.jsonObject
+//import org.jraf.feeed.api.step.Context
+//import org.jraf.feeed.api.Step
+//import org.jraf.feeed.engine.producer.core.StepChain
+//import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
+//import org.slf4j.LoggerFactory
+//
+//class JsonExtractStep : Step {
+//   private val logger = classLogger()
+//
+//  override suspend fun execute(context: Context): Result<Context> {
+//    val json: JsonElement = context["json"]
+//    val key: String = context["key", "key"]
+//    return runCatching {
+//      logger.debug("Extracting JSON key")
+//      context.with("json", json.jsonObject[key]!!)
+//    }
+//  }
+//}
+//
+//fun StepChain.jsonExtract(key: String?): StepChain {
+//  return addToContextIfNotNull("key", key) +
+//    JsonExtractStep()
+//}

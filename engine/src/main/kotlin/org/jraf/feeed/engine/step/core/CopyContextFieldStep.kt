@@ -23,12 +23,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.core
 
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class CopyContextFieldStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val sourceFieldName = context.string("sourceFieldName")
+    val sourceValue = context[sourceFieldName]
+    val targetFieldName = context.string("targetFieldName")
+    return context + (targetFieldName to sourceValue)
+  }
 }

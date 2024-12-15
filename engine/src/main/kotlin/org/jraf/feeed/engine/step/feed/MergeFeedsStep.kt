@@ -23,12 +23,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.feed
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonArray
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+import java.time.Instant
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class MergeFeedsStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val feed = context.jsonArray("feed")
+    val existingFeed = context.jsonArray("existingFeed", JsonArray(emptyList()))
+    val merged = JsonArray(
+      (existingFeed + feed)
+        .distinctBy { feedItem -> (feedItem as JsonObject).string("link") }
+        .sortedByDescending { feedItem ->
+          val dateStr = (feedItem as JsonObject).string("date")
+          Instant.parse(dateStr)
+        },
+    )
+    return context + ("feed" to merged)
+  }
 }

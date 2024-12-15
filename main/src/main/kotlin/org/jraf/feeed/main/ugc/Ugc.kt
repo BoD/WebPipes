@@ -25,89 +25,328 @@
 
 package org.jraf.feeed.main.ugc
 
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.step.Context
-import org.jraf.feeed.atom.atom
-import org.jraf.feeed.engine.producer.core.StepChain
-import org.jraf.feeed.engine.producer.core.addToContext
-import org.jraf.feeed.engine.producer.core.addVariableToContext
-import org.jraf.feeed.engine.producer.core.cache
-import org.jraf.feeed.engine.producer.feed.addFeedItemFieldToContext
-import org.jraf.feeed.engine.producer.feed.feedFilter
-import org.jraf.feeed.engine.producer.feed.feedItemMap
-import org.jraf.feeed.engine.producer.feed.feedItemMapField
-import org.jraf.feeed.engine.producer.feed.feedItemTextContains
-import org.jraf.feeed.engine.producer.feed.feedMaxItems
-import org.jraf.feeed.engine.producer.feed.mergeFeeds
-import org.jraf.feeed.engine.producer.html.htmlCrop
-import org.jraf.feeed.engine.producer.html.htmlFeed
-import org.jraf.feeed.engine.producer.net.UrlTextStep
-import org.jraf.feeed.engine.producer.net.urlText
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import org.jraf.feeed.atom.AtomStep
+import org.jraf.feeed.engine.execute.StepChainExecutor
+import org.jraf.feeed.engine.execute.StepExecutor
+import org.jraf.feeed.engine.step.core.CacheStep
+import org.jraf.feeed.engine.step.core.CopyContextFieldStep
+import org.jraf.feeed.engine.step.feed.AddFeedItemFieldToContextStep
+import org.jraf.feeed.engine.step.feed.FeedFilterStep
+import org.jraf.feeed.engine.step.feed.FeedItemMapFieldStep
+import org.jraf.feeed.engine.step.feed.FeedItemMapStep
+import org.jraf.feeed.engine.step.feed.FeedItemTextContainsStep
+import org.jraf.feeed.engine.step.feed.FeedMaxItemsStep
+import org.jraf.feeed.engine.step.feed.MergeFeedsStep
+import org.jraf.feeed.engine.step.html.HtmlCropStep
+import org.jraf.feeed.engine.step.html.HtmlFeedStep
+import org.jraf.feeed.engine.step.net.UrlTextStep
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
 import org.jraf.feeed.server.RequestParams
 
 private val url =
   "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
 
-private val stepChain: StepChain =
-  StepChain()
-    .addToContext("baseUrl", url)
-    .urlText()
-    .htmlFeed(aElementsXPath = "//div[@class='info-wrapper']//a")
-    .feedItemMap(
-      StepChain()
-        .addFeedItemFieldToContext("baseUrl", FeedItem.Field.Link)
-        .feedItemMapField(
-          mapper = UrlTextStep(),
-          fieldIn = FeedItem.Field.Link,
-          fieldInVariableName = "url",
-          fieldOut = FeedItem.Field.Body,
-          fieldOutVariableName = "text",
-        ),
-    )
-    .feedItemMap(
-      StepChain()
-        .feedItemTextContains(
-          fieldIn = FeedItem.Field.Body,
-          textToFind = "lyon",
-          fieldOut = FeedItem.Field.Extra("isLyon"),
-        ),
-    )
-    .feedFilter(FeedItem.Field.Extra("isLyon"))
-    .feedItemMap(
-      StepChain()
-        .feedItemMapField(
-          mapper = StepChain()
-            .addToContext(
-              "xPath" to "//div[@class='group-info d-none d-md-block'][4]/p[2]",
-              "extractText" to true,
-            )
-            .htmlCrop(),
-          fieldIn = FeedItem.Field.Body,
-          fieldInVariableName = "text",
-          fieldOut = FeedItem.Field.Body,
-          fieldOutVariableName = "text",
-        ),
-    )
-    .mergeFeeds()
-    .feedMaxItems()
-    .addVariableToContext(newVariableName = "existingFeed", existingVariableName = "feed")
-    .addVariableToContext(newVariableName = "atomLink", existingVariableName = "requestUrl")
-    .atom(
-      atomTitle = "UGC Culte",
-      atomDescription = "UGC Culte",
-      atomEntriesAuthor = "UGC",
-    )
-    .cache()
+private val stepChain = StepExecutor()
 
-private var context = Context()
+private var context = buildJsonObject {
+  put(
+    "steps",
+    buildJsonArray {
+      add(
+        buildJsonObject {
+          put("id", "downloadPage")
+          put("type", UrlTextStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("url", url)
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "createFeed")
+          put("type", HtmlFeedStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("baseUrl", url)
+              put("aElementsXPath", "//div[@class='info-wrapper']//a")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "downloadMoviePage")
+          put("type", UrlTextStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "mapMovieDownloadToFeedItemBody")
+          put("type", FeedItemMapFieldStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("mapperId", "downloadMoviePage")
+              put("inFeedItemFieldName", "link")
+              put("inContextFieldName", "url")
+              put("outFeedItemFieldName", "body")
+              put("outContextFieldName", "text")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "mapperDownloadMoviePage")
+          put("type", FeedItemMapStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("mapperId", "mapMovieDownloadToFeedItemBody")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "addIsLyon")
+          put("type", FeedItemTextContainsStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("inFeedItemFieldName", "body")
+              put("outFeedItemFieldName", "isLyon")
+              put("textToFind", "lyon")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "mapperAddIsLyon")
+          put("type", FeedItemMapStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("mapperId", "addIsLyon")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "filterIsLyon")
+          put("type", FeedFilterStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("conditionFeedItemFieldName", "isLyon")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "cropMovieBody")
+          put("type", HtmlCropStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("xPath", "//div[@class='group-info d-none d-md-block'][4]/p[2]")
+              put("extractText", true)
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "mapMovieCroppedBodyToFeedItemBody")
+          put("type", FeedItemMapFieldStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("mapperId", "cropMovieBody")
+              put("inFeedItemFieldName", "body")
+              put("inContextFieldName", "text")
+              put("outFeedItemFieldName", "body")
+              put("outContextFieldName", "text")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "putLinkIntoContext")
+          put("type", AddFeedItemFieldToContextStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("contextFieldName", "baseUrl")
+              put("feedItemFieldName", "link")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "putLinkIntoContextAndMapMovieCroppedBodyToFeedItemBody")
+          put("type", StepChainExecutor::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put(
+                "chain",
+                buildJsonArray {
+                  add("putLinkIntoContext")
+                  add("mapMovieCroppedBodyToFeedItemBody")
+                },
+              )
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "mapperCropMovieBody")
+          put("type", FeedItemMapStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("mapperId", "putLinkIntoContextAndMapMovieCroppedBodyToFeedItemBody")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "mergeFeeds")
+          put("type", MergeFeedsStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "feedMaxItems")
+          put("type", FeedMaxItemsStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "saveExistingFeed")
+          put("type", CopyContextFieldStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("sourceFieldName", "feed")
+              put("targetFieldName", "existingFeed")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "addAtomLink")
+          put("type", CopyContextFieldStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("sourceFieldName", "requestUrl")
+              put("targetFieldName", "atomLink")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "atom")
+          put("type", AtomStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("atomTitle", "UGC Culte")
+              put("atomDescription", "UGC Culte")
+              put("atomEntriesAuthor", "UGC")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "cachedChain")
+          put("type", StepChainExecutor::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put(
+                "chain",
+                buildJsonArray {
+                  add("downloadPage")
+                  add("createFeed")
+                  add("mapperDownloadMoviePage")
+                  add("mapperAddIsLyon")
+                  add("filterIsLyon")
+                  add("mapperCropMovieBody")
+                  add("mergeFeeds")
+                  add("feedMaxItems")
+                  add("saveExistingFeed")
+                  add("addAtomLink")
+                  add("atom")
+                },
+              )
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "cache")
+          put("type", CacheStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("cachedStepId", "cachedChain")
+            },
+          )
+        },
+      )
+    },
+  )
+}
 
 suspend fun produceUgc(requestParams: RequestParams): String {
   context = stepChain
     .execute(
-      context
-        .with("requestUrl", requestParams.requestUrl)
-        .with("url", url),
+      context +
+        ("requestUrl" to requestParams.requestUrl) +
+        ("url" to url) +
+        ("stepId" to "cache"),
     )
-    .getOrThrow()
-  return context["text"]
+  return context.string("text")
 }

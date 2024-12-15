@@ -23,12 +23,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.util
 
-import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
-}
+fun Any.classLogger(): Logger = LoggerFactory.getLogger(javaClass)

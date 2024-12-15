@@ -23,12 +23,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.feed
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.int
+import org.jraf.feeed.engine.util.jsonArray
+import org.jraf.feeed.engine.util.plus
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class FeedMaxItemsStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val feed = context.jsonArray("feed")
+    val maxItems = context.int("maxItems", 30)
+    val items = feed.take(maxItems)
+    return context + ("feed" to JsonArray(items))
+  }
 }

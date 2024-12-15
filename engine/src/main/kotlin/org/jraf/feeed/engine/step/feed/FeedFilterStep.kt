@@ -23,12 +23,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.feed
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.booleanOrNull
+import org.jraf.feeed.engine.util.jsonArray
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class FeedFilterStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val feed = context.jsonArray("feed")
+    val conditionFeedItemFieldName = context.string("conditionFeedItemFieldName")
+
+    return context + (
+      "feed" to
+        JsonArray(
+          feed.filter { feedItem ->
+            feedItem as JsonObject
+            feedItem.booleanOrNull(conditionFeedItemFieldName) ?: false
+          },
+        )
+      )
+  }
 }

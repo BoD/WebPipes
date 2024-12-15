@@ -23,12 +23,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.core
 
-import kotlinx.serialization.json.JsonObject
-import okio.Closeable
-
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
-}
+//class SetResultStep<IN, OUT : Any> : Step<IN, OUT> {
+//  override suspend fun produce(context: Context, input: IN): Result<ProducerOutput<OUT>> {
+//    val newInput = context.get<Any>("result", "result") as OUT
+//    return Result.success(context to newInput)
+//  }
+//
+//  override fun close() {}
+//}
+//
+//fun <IN, OUT, RESULT : Any> Step<IN, OUT>.setResult(result: RESULT?): Step<IN, RESULT> {
+//  return addToContextIfNotNull("result", result)
+//    .pipe(SetResultStep())
+//}

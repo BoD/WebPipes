@@ -23,12 +23,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.core
 
-import kotlinx.serialization.json.JsonObject
-import okio.Closeable
-
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
-}
+//import org.jraf.feeed.api.step.Context
+//import org.jraf.feeed.api.Step
+//
+//class RemoveFromContextStep(private val key: String) : Step {
+//  override suspend fun execute(context: Context): Result<Context> {
+//    return Result.success(context.without(key))
+//  }
+//}
+//
+//fun StepChain.removeFromContext(key: String): StepChain {
+//  return this + RemoveFromContextStep(key)
+//}

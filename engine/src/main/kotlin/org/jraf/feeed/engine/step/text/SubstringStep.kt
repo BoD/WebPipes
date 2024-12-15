@@ -23,12 +23,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.text
 
-import kotlinx.serialization.json.JsonObject
-import okio.Closeable
-
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
-}
+//import org.jraf.feeed.api.step.Context
+//import org.jraf.feeed.api.Step
+//import org.jraf.feeed.engine.producer.core.StepChain
+//import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
+//
+//class SubstringStep : Step {
+//  override suspend fun execute(context: Context): Result<Context> {
+//    val text: String = context["text"]
+//    val startIndex: Int = context["startIndex", 0]
+//    val endIndex: Int? = context["endIndex", null]
+//    return Result.success(context.with("text", if (endIndex == null) text.substring(startIndex) else text.substring(startIndex, endIndex)))
+//  }
+//}
+//
+//fun StepChain.substring(
+//  startIndex: Int? = null,
+//  endIndex: Int? = null,
+//): StepChain {
+//  return addToContextIfNotNull("startIndex", startIndex)
+//    .addToContextIfNotNull("endIndex", endIndex) +
+//    SubstringStep()
+//}

@@ -23,12 +23,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.core
 
-import kotlinx.serialization.json.JsonObject
-import okio.Closeable
-
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
-}
+//import org.jraf.feeed.api.step.Context
+//import org.jraf.feeed.api.Step
+//
+//class AssociateVariableStep : Step {
+//  override suspend fun execute(context: Context): Result<Context> {
+//    val existingVariableName: String = context["existingVariableName"]
+//    val existingVariableValue: Any = context[existingVariableName]
+//    val key: String = context["key", "key"]
+//    return Result.success(context.with(key, mapOf(key to existingVariableValue)))
+//  }
+//}
+//
+//fun org.jraf.feeed.engine.step.core.StepChain.associateVariable(
+//  key: String? = null,
+//  existingVariableName: String? = null,
+//): org.jraf.feeed.engine.step.core.StepChain {
+//  return addToContextIfNotNull("key", key)
+//    .addToContextIfNotNull("existingVariableName", existingVariableName) +
+//    org.jraf.feeed.engine.step.core.AssociateVariableStep()
+//}

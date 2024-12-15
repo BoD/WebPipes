@@ -23,12 +23,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.execute
 
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonArray
+import org.jraf.feeed.engine.util.plus
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class StepChainExecutor : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val chain = context.jsonArray("chain")
+    var currentContext = context
+    for (id in chain) {
+      val step = StepExecutor()
+      currentContext = step.execute(currentContext + ("stepId" to id))
+    }
+    return currentContext
+  }
 }

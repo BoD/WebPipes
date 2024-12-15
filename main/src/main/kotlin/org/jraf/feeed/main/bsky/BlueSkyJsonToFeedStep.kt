@@ -24,54 +24,54 @@
  */
 
 package org.jraf.feeed.main.bsky
-
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.step.Context
-import org.jraf.feeed.api.step.Step
-import org.jraf.feeed.engine.producer.core.StepChain
-import java.time.Instant
-
-class BlueSkyJsonToFeedStep : Step {
-  override suspend fun execute(context: Context): Result<Context> {
-    val array: List<JsonElement> = context["array"]
-    return runCatching {
-      val items = array.mapNotNull { jsonElement ->
-        val obj = jsonElement.jsonObject
-        val reply = obj["reply"]
-        if (reply != null) {
-          return@mapNotNull null
-        }
-        val post = obj["post"]!!.jsonObject
-        val record = post["record"]!!.jsonObject
-        val author = post["author"]!!
-        val authorHandle = author.jsonObject["handle"]!!.string
-        val authorDisplayName = author.jsonObject["displayName"]!!.string
-        val postId = post["uri"]!!.string.substringAfterLast('/')
-        val link = "https://bsky.app/profile/${authorHandle}/post/${postId}"
-        FeedItem(
-          title = "$authorDisplayName - $link",
-          link = link,
-          date = Instant.parse(record["createdAt"]!!.string),
-          body = null,
-          extras = mapOf(
-            "author" to authorHandle,
-          ),
-        )
-      }
-      context.with("feed", Feed(items))
-    }
-  }
-
-  override fun close() {}
-}
-
-fun StepChain.blueSkyJsonToFeed(): StepChain {
-  return this + BlueSkyJsonToFeedStep()
-}
-
-private val JsonElement.string: String
-  get() = jsonPrimitive.content
+//
+//import kotlinx.serialization.json.JsonElement
+//import kotlinx.serialization.json.jsonObject
+//import kotlinx.serialization.json.jsonPrimitive
+//import org.jraf.feeed.api.feed.Feed
+//import org.jraf.feeed.api.feed.FeedItem
+//import org.jraf.feeed.api.step.Context
+//import org.jraf.feeed.api.Step
+//import org.jraf.feeed.engine.producer.core.StepChain
+//import java.time.Instant
+//
+//class BlueSkyJsonToFeedStep : Step {
+//  override suspend fun execute(context: Context): Result<Context> {
+//    val array: List<JsonElement> = context["array"]
+//    return runCatching {
+//      val items = array.mapNotNull { jsonElement ->
+//        val obj = jsonElement.jsonObject
+//        val reply = obj["reply"]
+//        if (reply != null) {
+//          return@mapNotNull null
+//        }
+//        val post = obj["post"]!!.jsonObject
+//        val record = post["record"]!!.jsonObject
+//        val author = post["author"]!!
+//        val authorHandle = author.jsonObject["handle"]!!.string
+//        val authorDisplayName = author.jsonObject["displayName"]!!.string
+//        val postId = post["uri"]!!.string.substringAfterLast('/')
+//        val link = "https://bsky.app/profile/${authorHandle}/post/${postId}"
+//        FeedItem(
+//          title = "$authorDisplayName - $link",
+//          link = link,
+//          date = Instant.parse(record["createdAt"]!!.string),
+//          body = null,
+//          extras = mapOf(
+//            "author" to authorHandle,
+//          ),
+//        )
+//      }
+//      context.with("feed", Feed(items))
+//    }
+//  }
+//
+//  override fun close() {}
+//}
+//
+//fun StepChain.blueSkyJsonToFeed(): StepChain {
+//  return this + BlueSkyJsonToFeedStep()
+//}
+//
+//private val JsonElement.string: String
+//  get() = jsonPrimitive.content

@@ -23,12 +23,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.feed
 
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonObject
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+import org.jraf.feeed.engine.util.stringOrNull
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class FeedItemTextContainsStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val feedItem: JsonObject = context.jsonObject("feedItem")
+
+    val inFeedItemFieldName = context.string("inFeedItemFieldName")
+    val outFeedItemFieldName = context.string("outFeedItemFieldName")
+
+    val textToFind = context.string("textToFind")
+
+    val feedItemFieldValue: String? = feedItem.stringOrNull(inFeedItemFieldName)
+    return context + (
+      "feedItem" to
+        feedItem + (
+        outFeedItemFieldName to
+          (feedItemFieldValue?.contains(textToFind, ignoreCase = true) == true)
+        )
+      )
+  }
 }

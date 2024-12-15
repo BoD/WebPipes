@@ -23,12 +23,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.feed
 
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonObject
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class AddFeedItemFieldToContextStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val feedItem: JsonObject = context.jsonObject("feedItem")
+    val contextFieldName: String = context.string("contextFieldName")
+    val feedItemFieldName = context.string("feedItemFieldName")
+    return context + (contextFieldName to feedItem[feedItemFieldName])
+  }
 }

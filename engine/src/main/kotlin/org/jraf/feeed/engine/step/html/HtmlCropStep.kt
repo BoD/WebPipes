@@ -23,12 +23,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.api
+package org.jraf.feeed.engine.step.html
 
 import kotlinx.serialization.json.JsonObject
-import okio.Closeable
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.boolean
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import us.codecraft.xsoup.Xsoup
 
-fun interface Step : Closeable {
-  suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
+class HtmlCropStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val text = context.string("text")
+    val baseUrl = context.string("baseUrl")
+    val xPath = context.string("xPath")
+    val extractText = context.boolean("extractText", false)
+    val xPathEvaluator = Xsoup.compile(xPath)
+    val document: Document = Jsoup.parse(text, baseUrl)
+    val element = xPathEvaluator.evaluate(document).elements.first()
+    val newText = (if (extractText) element?.text() else element?.outerHtml()) ?: ""
+    return context + ("text" to newText)
+  }
 }

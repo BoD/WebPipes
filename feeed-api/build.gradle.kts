@@ -9,4 +9,7 @@ kotlin {
 dependencies {
   // Okio
   api(Square.okio)
+
+  // Json
+  api(KotlinX.serialization.json)
 }

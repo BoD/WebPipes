@@ -27,67 +27,51 @@ package org.jraf.feeed.atom
 
 import com.rometools.rome.feed.synd.SyndContentImpl
 import com.rometools.rome.feed.synd.SyndEntryImpl
-import com.rometools.rome.feed.synd.SyndFeed
 import com.rometools.rome.feed.synd.SyndFeedImpl
 import com.rometools.rome.io.SyndFeedOutput
-import org.jraf.feeed.api.feed.Feed
-import org.jraf.feeed.api.feed.FeedItem
-import org.jraf.feeed.api.step.Context
-import org.jraf.feeed.api.step.Step
-import org.jraf.feeed.engine.producer.core.StepChain
-import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
+import kotlinx.serialization.json.JsonObject
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonArray
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+import org.jraf.feeed.engine.util.stringOrNull
 import java.time.Instant
 import java.util.Date
 
 class AtomStep : Step {
-  override suspend fun execute(context: Context): Result<Context> {
-    return runCatching {
-      val feed: Feed = context["feed"]
-      val atomTitle: String = context["atomTitle"]
-      val atomDescription: String = context["atomDescription"]
-      val atomLink: String = context["atomLink"]
-      val atomPublishedDate: Instant? = context["atomPublishedDate", null]
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val feed = context.jsonArray("feed")
+    val atomTitle = context.string("atomTitle")
+    val atomDescription = context.string("atomDescription")
+    val atomLink = context.string("atomLink")
+    val atomPublishedDate: Instant? = context.stringOrNull("atomPublishedDate")?.let { Instant.parse(it) }
 
-      val syndFeed: SyndFeed = SyndFeedImpl()
-      syndFeed.feedType = "atom_1.0"
-      syndFeed.title = atomTitle
-      syndFeed.description = atomDescription
-      syndFeed.link = atomLink
-      syndFeed.uri = atomLink
-      syndFeed.publishedDate = atomPublishedDate?.let { Date.from(it) } ?: Date.from(feed.items.maxOf { it.date })
-      syndFeed.entries = feed.items.map { feedItem ->
-        SyndEntryImpl().apply {
-          title = feedItem.title
-          link = feedItem.link
-          uri = feedItem.link
-          feedItem.body?.let { body ->
-            contents = listOf(
-              SyndContentImpl().apply {
-                type = "text/html"
-                value = body
-              },
-            )
-          }
-          publishedDate = Date.from(feedItem.date)
-          author = feedItem[FeedItem.Field.Extra("author")] ?: context["atomEntriesAuthor", null]
+    val syndFeed = SyndFeedImpl()
+    syndFeed.feedType = "atom_1.0"
+    syndFeed.title = atomTitle
+    syndFeed.description = atomDescription
+    syndFeed.link = atomLink
+    syndFeed.uri = atomLink
+    syndFeed.publishedDate = atomPublishedDate?.let { Date.from(it) }
+      ?: Date.from(feed.maxOf { feedItem -> Instant.parse((feedItem as JsonObject).string("date")) })
+    syndFeed.entries = feed.map { feedItem ->
+      feedItem as JsonObject
+      SyndEntryImpl().apply {
+        title = feedItem.string("title")
+        link = feedItem.string("link")
+        uri = feedItem.string("link")
+        feedItem.stringOrNull("body")?.let { body ->
+          contents = listOf(
+            SyndContentImpl().apply {
+              type = "text/html"
+              value = body
+            },
+          )
         }
+        publishedDate = Date.from(Instant.parse(feedItem.string("date")))
+        author = feedItem.stringOrNull("author") ?: context.stringOrNull("atomEntriesAuthor")
       }
-      context.with("text", SyndFeedOutput().outputString(syndFeed))
     }
+    return context + ("text" to SyndFeedOutput().outputString(syndFeed))
   }
-}
-
-fun StepChain.atom(
-  atomTitle: String? = null,
-  atomDescription: String? = null,
-  atomLink: String? = null,
-  atomPublishedDate: Instant? = null,
-  atomEntriesAuthor: String? = null,
-): StepChain {
-  return addToContextIfNotNull("atomTitle", atomTitle)
-    .addToContextIfNotNull("atomDescription", atomDescription)
-    .addToContextIfNotNull("atomLink", atomLink)
-    .addToContextIfNotNull("atomPublishedDate", atomPublishedDate)
-    .addToContextIfNotNull("atomEntriesAuthor", atomEntriesAuthor) +
-    AtomStep()
 }
