@@ -23,55 +23,49 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package org.jraf.feeed.main.bsky
-//
-//import kotlinx.serialization.json.JsonElement
-//import kotlinx.serialization.json.jsonObject
-//import kotlinx.serialization.json.jsonPrimitive
-//import org.jraf.feeed.api.feed.Feed
-//import org.jraf.feeed.api.feed.FeedItem
-//import org.jraf.feeed.api.step.Context
-//import org.jraf.feeed.api.Step
-//import org.jraf.feeed.engine.producer.core.StepChain
-//import java.time.Instant
-//
-//class BlueSkyJsonToFeedStep : Step {
-//  override suspend fun execute(context: Context): Result<Context> {
-//    val array: List<JsonElement> = context["array"]
-//    return runCatching {
-//      val items = array.mapNotNull { jsonElement ->
-//        val obj = jsonElement.jsonObject
-//        val reply = obj["reply"]
-//        if (reply != null) {
-//          return@mapNotNull null
-//        }
-//        val post = obj["post"]!!.jsonObject
-//        val record = post["record"]!!.jsonObject
-//        val author = post["author"]!!
-//        val authorHandle = author.jsonObject["handle"]!!.string
-//        val authorDisplayName = author.jsonObject["displayName"]!!.string
-//        val postId = post["uri"]!!.string.substringAfterLast('/')
-//        val link = "https://bsky.app/profile/${authorHandle}/post/${postId}"
-//        FeedItem(
-//          title = "$authorDisplayName - $link",
-//          link = link,
-//          date = Instant.parse(record["createdAt"]!!.string),
-//          body = null,
-//          extras = mapOf(
-//            "author" to authorHandle,
-//          ),
-//        )
-//      }
-//      context.with("feed", Feed(items))
-//    }
-//  }
-//
-//  override fun close() {}
-//}
-//
-//fun StepChain.blueSkyJsonToFeed(): StepChain {
-//  return this + BlueSkyJsonToFeedStep()
-//}
-//
-//private val JsonElement.string: String
-//  get() = jsonPrimitive.content
+
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonArray
+import org.jraf.feeed.engine.util.jsonObject
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+import java.time.Instant
+
+class BlueSkyJsonToFeedStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val bskyFeedObject = context.jsonObject("json")
+    val bskyFeedArray: List<JsonElement> = bskyFeedObject.jsonArray("feed")
+    val feed: List<JsonObject> = bskyFeedArray.mapNotNull { jsonElement ->
+      val obj = jsonElement.jsonObject
+      val reply = obj["reply"]
+      if (reply != null) {
+        return@mapNotNull null
+      }
+      val post = obj.jsonObject("post")
+      val record = post.jsonObject("record")
+      val author = post.jsonObject("author")
+      val authorHandle = author.string("handle")
+      val authorDisplayName = author.string("displayName")
+      val postId = post.string("uri").substringAfterLast('/')
+      val link = "https://bsky.app/profile/${authorHandle}/post/${postId}"
+      buildJsonObject {
+        put("title", "$authorDisplayName - $link")
+        put("link", link)
+        put("date", Instant.parse(record["createdAt"]!!.string).toString())
+        put("body", null)
+        put("author", authorHandle)
+      }
+    }
+    return context + ("feed" to JsonArray(feed))
+  }
+}

@@ -51,8 +51,6 @@ import org.jraf.feeed.server.RequestParams
 private val url =
   "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
 
-private val stepChain = StepExecutor()
-
 private var context = buildJsonObject {
   put(
     "steps",
@@ -290,7 +288,7 @@ private var context = buildJsonObject {
             buildJsonObject {
               put("atomTitle", "UGC Culte")
               put("atomDescription", "UGC Culte")
-              put("atomEntriesAuthor", "UGC")
+              put("atomEntriesAuthor", "WebPipes")
             },
           )
         },
@@ -341,11 +339,10 @@ private var context = buildJsonObject {
 }
 
 suspend fun produceUgc(requestParams: RequestParams): String {
-  context = stepChain
+  context = StepExecutor()
     .execute(
       context +
         ("requestUrl" to requestParams.requestUrl) +
-        ("url" to url) +
         ("stepId" to "cache"),
     )
   return context.string("text")

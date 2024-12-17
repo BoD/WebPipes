@@ -25,22 +25,19 @@
 
 package org.jraf.feeed.engine.step.json
 
-//import kotlinx.serialization.json.Json
-//import org.jraf.feeed.api.step.Context
-//import org.jraf.feeed.api.Step
-//import org.jraf.feeed.engine.producer.core.StepChain
-//import org.slf4j.LoggerFactory
-//
-//
-//class JsonStep : Step {
-//   private val logger = classLogger()
-//  override suspend fun execute(context: Context): Result<Context> {
-//    return runCatching {
-//      logger.debug("Parsing JSON")
-//      val text: String = context["text"]
-//      context.with("json", Json.parseToJsonElement(text))
-//    }
-//  }
-//}
-//
-//fun StepChain.json(): StepChain = this + JsonStep()
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.classLogger
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+
+class TextToJsonStep : Step {
+  private val logger = classLogger()
+
+  override suspend fun execute(context: JsonObject): JsonObject {
+    logger.debug("Parsing JSON")
+    val text = context.string("text")
+    return context + ("json" to Json.parseToJsonElement(text))
+  }
+}

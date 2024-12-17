@@ -23,15 +23,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.step.core
+package org.jraf.feeed.engine.step.text
 
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.plus
 import org.jraf.feeed.engine.util.string
 
-class RemoveFromContextStep : Step {
+class BuildStringFromContextFields : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
-    val fieldName = context.string("fieldName")
-    return JsonObject(context - fieldName)
+    val template = context.string("template")
+    val outputField = context.string("outputField")
+    val result = template.replace(Regex("\\{\\{([^}]+)}}")) { matchResult ->
+      val fieldName = matchResult.groupValues[1]
+      when (val value = context[fieldName]) {
+        is JsonPrimitive -> value.content
+        else -> value.toString()
+      }
+    }
+    return context + (outputField to result)
   }
 }

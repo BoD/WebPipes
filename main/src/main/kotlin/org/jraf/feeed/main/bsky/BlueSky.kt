@@ -25,76 +25,223 @@
 
 package org.jraf.feeed.main.bsky
 
-//import org.jraf.feeed.api.step.Context
-//import org.jraf.feeed.api.Step
-//import org.jraf.feeed.atom.atom
-//import org.jraf.feeed.engine.producer.core.StepChain
-//import org.jraf.feeed.engine.producer.core.addToContext
-//import org.jraf.feeed.engine.producer.core.addVariableToContext
-//import org.jraf.feeed.engine.producer.core.associateVariable
-//import org.jraf.feeed.engine.producer.core.cache
-//import org.jraf.feeed.engine.producer.core.removeFromContext
-//import org.jraf.feeed.engine.producer.feed.feedMaxItems
-//import org.jraf.feeed.engine.producer.feed.mergeFeeds
-//import org.jraf.feeed.engine.producer.json.json
-//import org.jraf.feeed.engine.producer.json.jsonArray
-//import org.jraf.feeed.engine.producer.json.jsonExtract
-//import org.jraf.feeed.engine.step.json.jsonPrimitive
-//import org.jraf.feeed.engine.producer.net.urlText
-//import org.jraf.feeed.engine.producer.text.prefix
-//import org.jraf.feeed.server.RequestParams
-//
-//private val createSessionUrl = "https://bsky.social/xrpc/com.atproto.server.createSession"
-//private val getListFeedUrl =
-//  "https://bsky.social/xrpc/app.bsky.feed.getListFeed?list=at%3A%2F%2Fdid%3Aplc%3Azrwjh3urruteuvjonaajoq3r%2Fapp.bsky.graph.list%2F3lbclce6ypy2p&limit=30"
-//
-//private val stepChain: StepChain =
-//  StepChain()
-//    .addToContext("headers" to mapOf("Content-Type" to "application/json"))
-//    .plus(
-//      object : Step {
-//        override suspend fun execute(context: Context): Result<Context> {
-//          return Result.success(
-//            context.with("body", """{"identifier": "${context["identifier", ""]}", "password": "${context["password", ""]}"}"""),
-//          )
-//        }
-//      },
-//    )
-//    .urlText()
-//    .json()
-//    .jsonExtract("accessJwt")
-//    .jsonPrimitive()
-//    .prefix("Bearer ")
-//    .associateVariable(key = "Authorization", existingVariableName = "text")
-//    .addVariableToContext(newVariableName = "headers", existingVariableName = "Authorization")
-//    .addToContext("url", getListFeedUrl)
-//    .removeFromContext("body")
-//    .urlText()
-//    .json()
-//    .jsonExtract("feed")
-//    .jsonArray()
-//    .blueSkyJsonToFeed()
-//    .mergeFeeds()
-//    .feedMaxItems()
-//    .addVariableToContext(newVariableName = "atomLink", existingVariableName = "requestUrl")
-//    .atom(
-//      atomTitle = "Bluesky",
-//      atomDescription = "Bluesky",
-//      atomEntriesAuthor = "Feeed",
-//    )
-//    .cache()
-//
-//private var context = Context()
-//
-//suspend fun produceBlueSky(requestParams: RequestParams): String {
-//  context = stepChain
-//    .execute(
-//      context
-//        .with("requestUrl", requestParams.requestUrl)
-//        .with("identifier", requestParams.queryParams["identifier"]!!)
-//        .with("password", requestParams.queryParams["password"]!!)
-//        .with("url", createSessionUrl),
-//    )
-//    .getOrThrow()
-//  return context["text"]
-//}
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import org.jraf.feeed.atom.AtomStep
+import org.jraf.feeed.engine.execute.StepChainExecutor
+import org.jraf.feeed.engine.execute.StepExecutor
+import org.jraf.feeed.engine.step.core.CacheStep
+import org.jraf.feeed.engine.step.core.CopyContextFieldStep
+import org.jraf.feeed.engine.step.core.RemoveFromContextStep
+import org.jraf.feeed.engine.step.feed.FeedMaxItemsStep
+import org.jraf.feeed.engine.step.feed.MergeFeedsStep
+import org.jraf.feeed.engine.step.json.TextToJsonStep
+import org.jraf.feeed.engine.step.net.UrlTextStep
+import org.jraf.feeed.engine.step.text.BuildStringFromContextFields
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+import org.jraf.feeed.server.RequestParams
+
+private val createSessionUrl = "https://bsky.social/xrpc/com.atproto.server.createSession"
+private val getListFeedUrl =
+  "https://bsky.social/xrpc/app.bsky.feed.getListFeed?list=at%3A%2F%2Fdid%3Aplc%3Azrwjh3urruteuvjonaajoq3r%2Fapp.bsky.graph.list%2F3lbclce6ypy2p&limit=30"
+
+private var context = buildJsonObject {
+  put(
+    "steps",
+    buildJsonArray {
+      add(
+        buildJsonObject {
+          put("id", "createSessionBody")
+          put("type", BuildStringFromContextFields::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("template", """{"identifier": "{{identifier}}", "password": "{{password}}"}""")
+              put("outputField", "body")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "createSession")
+          put("type", UrlTextStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("url", createSessionUrl)
+              put(
+                "headers",
+                buildJsonObject {
+                  put("Content-Type", "application/json")
+                },
+              )
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "addAuthorizationHeader")
+          put("type", BlueSkyAddAuthorizationHeaderStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "removeBody")
+          put("type", RemoveFromContextStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("fieldName", "body")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "getListFeed")
+          put("type", UrlTextStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("url", getListFeedUrl)
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "listFeedTextToJson")
+          put("type", TextToJsonStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "blueSkyJsonToFeed")
+          put("type", BlueSkyJsonToFeedStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "mergeFeeds")
+          put("type", MergeFeedsStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "feedMaxItems")
+          put("type", FeedMaxItemsStep::class.qualifiedName)
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "saveExistingFeed")
+          put("type", CopyContextFieldStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("sourceFieldName", "feed")
+              put("targetFieldName", "existingFeed")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "addAtomLink")
+          put("type", CopyContextFieldStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("sourceFieldName", "requestUrl")
+              put("targetFieldName", "atomLink")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "atom")
+          put("type", AtomStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("atomTitle", "Bluesky")
+              put("atomDescription", "Bluesky")
+              put("atomEntriesAuthor", "WebPipes")
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "cachedChain")
+          put("type", StepChainExecutor::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put(
+                "chain",
+                buildJsonArray {
+                  add("createSessionBody")
+                  add("createSession")
+                  add("addAuthorizationHeader")
+                  add("removeBody")
+                  add("getListFeed")
+                  add("listFeedTextToJson")
+                  add("blueSkyJsonToFeed")
+                  add("mergeFeeds")
+                  add("feedMaxItems")
+                  add("saveExistingFeed")
+                  add("addAtomLink")
+                  add("atom")
+                },
+              )
+            },
+          )
+        },
+      )
+
+      add(
+        buildJsonObject {
+          put("id", "cache")
+          put("type", CacheStep::class.qualifiedName)
+          put(
+            "configuration",
+            buildJsonObject {
+              put("cachedStepId", "cachedChain")
+            },
+          )
+        },
+      )
+    },
+  )
+}
+
+suspend fun produceBlueSky(requestParams: RequestParams): String {
+  context = StepExecutor()
+    .execute(
+      context +
+        ("requestUrl" to requestParams.requestUrl) +
+        ("identifier" to requestParams.queryParams["identifier"]!!) +
+        ("password" to requestParams.queryParams["password"]!!) +
+        ("stepId" to "cache"),
+    )
+  return context.string("text")
+}

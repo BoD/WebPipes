@@ -23,15 +23,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.step.core
+package org.jraf.feeed.main.bsky
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.plus
 import org.jraf.feeed.engine.util.string
 
-class RemoveFromContextStep : Step {
+class BlueSkyAddAuthorizationHeaderStep : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
-    val fieldName = context.string("fieldName")
-    return JsonObject(context - fieldName)
+    val sessionJsonText = context.string("text")
+    val sessionJson = Json.parseToJsonElement(sessionJsonText) as JsonObject
+    val accessJwt = sessionJson.string("accessJwt")
+    val headers = JsonObject(mapOf()) + ("Authorization" to "Bearer $accessJwt")
+    return context + ("headers" to headers)
   }
 }

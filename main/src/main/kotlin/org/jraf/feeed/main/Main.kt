@@ -25,9 +25,8 @@
 
 package org.jraf.feeed.main
 
-//import org.jraf.feeed.main.bsky.produceBlueSky
-//import org.jraf.feeed.main.ugc.produceWordOfTheDay
 import org.jraf.feeed.engine.util.classLogger
+import org.jraf.feeed.main.bsky.produceBlueSky
 import org.jraf.feeed.main.ugc.produceUgc
 import org.jraf.feeed.server.Server
 import org.slf4j.simple.SimpleLogger
@@ -40,7 +39,7 @@ class Main {
     Server(
       mapOf(
         "ugc" to ::produceUgc,
-//        "bluesky" to ::produceBlueSky,
+        "bluesky" to ::produceBlueSky,
 //        "wotd" to ::produceWordOfTheDay,
       ),
     ).start()
