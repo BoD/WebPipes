@@ -23,21 +23,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.feeed.engine.step.json
+package org.jraf.feeed.engine.step.text
 
-//import kotlinx.serialization.json.JsonElement
-//import kotlinx.serialization.json.jsonArray
-//import org.jraf.feeed.api.step.Context
-//import org.jraf.feeed.api.Step
-//import org.jraf.feeed.engine.producer.core.StepChain
-//
-//class JsonArrayStep : Step {
-//  override suspend fun execute(context: Context): Result<Context> {
-//    val json: JsonElement = context["json"]
-//    return Result.success(context.with("array", json.jsonArray))
-//  }
-//}
-//
-//fun StepChain.jsonArray(): StepChain {
-//  return this + JsonArrayStep()
-//}
+import kotlinx.serialization.json.JsonObject
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+
+class ReplaceStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val inputFieldName = context.string("inputFieldName", "text")
+    val text = context.string(inputFieldName)
+    val outputFieldName = context.string("outputFieldName", "text")
+    val regex = context.string("regex")
+    val replacement = context.string("replacement")
+    return context + (outputFieldName to text.replace(regex.toRegex(), replacement))
+  }
+}

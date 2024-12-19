@@ -24,33 +24,28 @@
  */
 
 package org.jraf.feeed.engine.step.json
-//
-//import kotlinx.serialization.json.JsonObject
-//import kotlinx.serialization.json.buildJsonObject
-//import org.jraf.feeed.api.step.Context
-//import org.jraf.feeed.api.Step
-//import org.jraf.feeed.engine.producer.core.StepChain
-//import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-//
-//class JsonFilterKeysStep : Step {
-//  override suspend fun execute(context: Context): Result<Context> {
-//    return runCatching {
-//      val allowedKeys: List<String> = context["allowedKeys", emptyList()]
-//      val jsonElement = buildJsonObject {
-//        val jsonObject: JsonObject = context["json"]
-//        for ((key, value) in jsonObject) {
-//          if (key in allowedKeys) {
-//            put(key, value)
-//          }
-//        }
-//      }
-//      context.with("json", jsonElement)
-//    }
-//  }
-//}
-//
-//fun StepChain.jsonFilterKeys(
-//  allowedKeys: List<String>? = null,
-//): StepChain =
-//  addToContextIfNotNull("allowedKeys", allowedKeys) +
-//    JsonFilterKeysStep()
+
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonArray
+import org.jraf.feeed.engine.util.jsonObject
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+
+class JsonFilterKeysStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val inputFieldName = context.string("inputFieldName", "json")
+    val outputFieldName = context.string("outputFieldName", "json")
+    val allowedKeys: List<String> = context.jsonArray("allowedKeys").map { it.string }
+    val outputJsonObject = buildJsonObject {
+      val jsonObject: JsonObject = context.jsonObject(inputFieldName)
+      for ((key, value) in jsonObject) {
+        if (key in allowedKeys) {
+          put(key, value)
+        }
+      }
+    }
+    return context + (outputFieldName to outputJsonObject)
+  }
+}

@@ -60,7 +60,7 @@ private var context = buildJsonObject {
             "configuration",
             buildJsonObject {
               put("template", """{"identifier": "{{identifier}}", "password": "{{password}}"}""")
-              put("outputField", "body")
+              put("outputFieldName", "body")
             },
           )
         },

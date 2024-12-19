@@ -34,7 +34,7 @@ import org.jraf.feeed.engine.util.string
 class BuildStringFromContextFields : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
     val template = context.string("template")
-    val outputField = context.string("outputField")
+    val outputFieldName = context.string("outputFieldName")
     val result = template.replace(Regex("\\{\\{([^}]+)}}")) { matchResult ->
       val fieldName = matchResult.groupValues[1]
       when (val value = context[fieldName]) {
@@ -42,6 +42,6 @@ class BuildStringFromContextFields : Step {
         else -> value.toString()
       }
     }
-    return context + (outputField to result)
+    return context + (outputFieldName to result)
   }
 }

@@ -25,19 +25,24 @@
 
 package org.jraf.feeed.engine.step.json
 
-//import kotlinx.serialization.json.JsonElement
-//import org.jraf.feeed.api.step.Context
-//import org.jraf.feeed.api.Step
-//import org.jraf.feeed.engine.producer.core.StepChain
-//
-//class JsonToTextStep : Step {
-//  override suspend fun execute(context: Context): Result<Context> {
-//    return runCatching {
-//      val jsonElement: JsonElement = context["json"]
-//      val text = jsonElement.toString()
-//      context.with("text", text)
-//    }
-//  }
-//}
-//
-//fun StepChain.jsonToText(): StepChain = this + JsonToTextStep()
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.jsonObject
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+
+class JsonToTextStep : Step {
+  private val json = Json {
+    prettyPrint = true
+  }
+
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val inputFieldName = context.string("inputFieldName", "json")
+    val outputFieldName = context.string("outputFieldName", "text")
+    val jsonElement = context.jsonObject(inputFieldName)
+    val text = json.encodeToString(jsonElement)
+    return context + (outputFieldName to text)
+  }
+}

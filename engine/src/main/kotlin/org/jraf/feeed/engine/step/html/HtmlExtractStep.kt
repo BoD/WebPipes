@@ -25,39 +25,25 @@
 
 package org.jraf.feeed.engine.step.html
 
-//import org.jraf.feeed.api.step.Context
-//import org.jraf.feeed.api.Step
-//import org.jraf.feeed.engine.producer.core.StepChain
-//import org.jraf.feeed.engine.producer.core.addToContextIfNotNull
-//import org.jsoup.Jsoup
-//import org.jsoup.nodes.Document
-//import us.codecraft.xsoup.Xsoup
-//
-//class HtmlExtractStep : Step {
-//  override suspend fun execute(context: Context): Result<Context> {
-//    return runCatching {
-//      val baseUrl: String = context["baseUrl"]
-//      val xPath: String = context["xPath"]
-//      val xPathEvaluator = Xsoup.compile(xPath)
-//      val text: String = context["text"]
-//      val variableName: String = context["variableName", "text"]
-//
-//      val document: Document = Jsoup.parse(text, baseUrl)
-//      val extracted = xPathEvaluator.evaluate(document).elements.first()!!.html()
-//      context.with(variableName, extracted)
-//    }
-//  }
-//}
-//
-//fun StepChain.htmlExtract(
-//  text: String? = null,
-//  baseUrl: String? = null,
-//  xPath: String? = null,
-//  variableName: String? = null,
-//): StepChain {
-//  return addToContextIfNotNull("text", text)
-//    .addToContextIfNotNull("baseUrl", baseUrl)
-//    .addToContextIfNotNull("xPath", xPath)
-//    .addToContextIfNotNull("variableName", variableName) +
-//    HtmlExtractStep()
-//}
+import kotlinx.serialization.json.JsonObject
+import org.jraf.feeed.api.Step
+import org.jraf.feeed.engine.util.plus
+import org.jraf.feeed.engine.util.string
+import org.jraf.feeed.engine.util.stringOrNull
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import us.codecraft.xsoup.Xsoup
+
+class HtmlExtractStep : Step {
+  override suspend fun execute(context: JsonObject): JsonObject {
+    val baseUrl = context.stringOrNull("baseUrl")
+    val xPath = context.string("xPath")
+    val xPathEvaluator = Xsoup.compile(xPath)
+    val text = context.string("text")
+    val outputFieldName = context.string("outputFieldName", "text")
+
+    val document: Document = if (baseUrl == null) Jsoup.parse(text) else Jsoup.parse(text, baseUrl)
+    val extracted = xPathEvaluator.evaluate(document).elements.first()!!.html()
+    return context + (outputFieldName to extracted)
+  }
+}
