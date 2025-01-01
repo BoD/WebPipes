@@ -1,4 +1,4 @@
-rootProject.name = "webpipes"
+rootProject.name = "WebPipes"
 
 pluginManagement {
   repositories {
