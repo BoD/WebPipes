@@ -13,7 +13,7 @@ kotlin {
 }
 
 application {
-  mainClass.set("org.jraf.feeed.main.MainKt")
+  mainClass.set("org.jraf.webpipes.main.MainKt")
 }
 
 dependencies {
@@ -21,10 +21,10 @@ dependencies {
   implementation("org.slf4j:slf4j-api:_")
   implementation("org.slf4j:slf4j-simple:_")
 
-  // Feeed
-  implementation(project(":server"))
-  implementation(project(":engine"))
-  implementation(project(":atom"))
+  // WebPipes
+  implementation(project(":webpipes-server"))
+  implementation(project(":webpipes-engine"))
+  implementation(project(":webpipes-atom"))
 }
 
 docker {

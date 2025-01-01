@@ -1,4 +1,4 @@
-rootProject.name = "feeed"
+rootProject.name = "webpipes"
 
 pluginManagement {
   repositories {
@@ -19,9 +19,9 @@ plugins {
 }
 
 include(
-  ":feeed-api",
-  ":engine",
-  ":atom",
-  ":server",
+  ":webpipes-api",
+  ":webpipes-engine",
+  ":webpipes-atom",
+  ":webpipes-server",
   ":main",
 )

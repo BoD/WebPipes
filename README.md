@@ -1,4 +1,4 @@
-# Feeed
+# WebPipes
 
 WIP!!!
 
@@ -7,14 +7,14 @@ WIP!!!
 ### Building and pushing the image to Docker Hub
 
 ```
-docker image rm bodlulu/feeed:latest
+docker image rm bodlulu/webpipes:latest
 DOCKER_USERNAME=<your docker hub login> DOCKER_PASSWORD=<your docker hub password> ./gradlew dockerPushImage
 ```
 
 ### Running the image
 
 ```
-docker pull bodlulu/feeed
+docker pull bodlulu/webpipes
 docker run -p <PORT TO LISTEN TO>:8080 bodlulu/github-to-bookmarks
 ```
 

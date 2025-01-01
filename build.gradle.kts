@@ -3,7 +3,7 @@ plugins {
   id("com.bmuschko.docker-java-application") apply false
 }
 
-group = "org.jraf.feeed"
+group = "org.jraf.webpipes"
 version = "1.0.0"
 
 // `./gradlew refreshVersions` to update dependencies
