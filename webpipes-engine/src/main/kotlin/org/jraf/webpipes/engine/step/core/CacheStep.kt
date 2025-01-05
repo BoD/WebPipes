@@ -32,6 +32,7 @@ import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.int
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
+import org.jraf.webpipes.engine.util.stringOrNull
 import java.time.Instant
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -43,7 +44,7 @@ class CacheStep : Step {
 
   override suspend fun execute(context: JsonObject): JsonObject {
     val maxAge: Duration = context.int("maxAge", 3600).toDuration(DurationUnit.SECONDS)
-    val cachedTime: Instant? = context["cachedTime"]?.let { Instant.parse(it.string) }
+    val cachedTime: Instant? = context.stringOrNull("cachedTime")?.let { Instant.parse(it) }
     return if (cachedTime == null || java.time.Duration.between(Instant.now(), cachedTime).abs().toKotlinDuration() > maxAge) {
       logger.debug("Cache stale or empty, executing")
       val cachedStepId = context.string("cachedStepId")

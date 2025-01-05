@@ -27,11 +27,15 @@ package org.jraf.webpipes.engine.execute
 
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
+import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.jsonArray
 import org.jraf.webpipes.engine.util.jsonObject
+import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
 
 class StepExecutor : Step {
+  private val logger = classLogger()
+
   override suspend fun execute(context: JsonObject): JsonObject {
     val stepId = context.string("stepId")
     val stepsById = context.jsonArray("steps")
@@ -40,7 +44,18 @@ class StepExecutor : Step {
     val stepDeclaration = stepsById[stepId] ?: error("Step id '$stepId' not found in steps")
     val stepType = stepDeclaration.string("type")
     val stepConfiguration = stepDeclaration.jsonObject("configuration", JsonObject(emptyMap()))
-    val stepInstance = Class.forName(stepType).getDeclaredConstructor().newInstance() as Step
-    return stepInstance.execute(JsonObject(context + stepConfiguration))
+    logger.debug("Executing step {}", stepType)
+    return when {
+      stepType.startsWith("local:") -> {
+        val localStepType = stepType.removePrefix("local:")
+        LocalStepExecutor(localStepType).execute(context + stepConfiguration)
+      }
+
+      stepType.startsWith("http:") || stepType.startsWith("https:") -> {
+        RemoteStepExecutor(stepType).execute(context + stepConfiguration)
+      }
+
+      else -> error("Unknown step type '$stepType'")
+    }
   }
 }

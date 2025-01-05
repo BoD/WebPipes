@@ -25,25 +25,36 @@
 
 package org.jraf.webpipes.main
 
+import org.jraf.webpipes.engine.execute.LocalStepExecutor
+import org.jraf.webpipes.engine.recipe.RecipeExecutor
 import org.jraf.webpipes.engine.util.classLogger
-import org.jraf.webpipes.main.bsky.executeBlueSky
-import org.jraf.webpipes.main.ugc.executeUgc
-import org.jraf.webpipes.main.ugc.executeWordOfTheDay
+import org.jraf.webpipes.server.RequestParams
 import org.jraf.webpipes.server.Server
 import org.slf4j.simple.SimpleLogger
 
 class Main {
   private val logger = classLogger()
+  private val recipeExecutor = RecipeExecutor()
 
   fun start() {
     logger.info("Starting server")
     Server(
-      mapOf(
-        "ugc" to ::executeUgc,
-        "bluesky" to ::executeBlueSky,
-        "wotd" to ::executeWordOfTheDay,
-      ),
+      recipeExecutor = { requestParams ->
+        runCatching { executeRecipe(requestParams) }.getOrNull()
+      },
+      stepExecutor = { path, context ->
+        runCatching { LocalStepExecutor(path).execute(context) }.getOrNull()
+      },
     ).start()
+  }
+
+  private suspend fun executeRecipe(requestParams: RequestParams): Pair<String, String> {
+    val executionResult = recipeExecutor.executeRecipe(
+      recipeId = requestParams.recipeId,
+      requestUrl = requestParams.requestUrl,
+      queryParams = requestParams.queryParams,
+    )
+    return executionResult.body to executionResult.contentType
   }
 }
 

@@ -7,7 +7,7 @@
  *                              /___/
  * repository.
  *
- * Copyright (C) 2024-present Benoit 'BoD' Lubek (BoD@JRAF.org)
+ * Copyright (C) 2025-present Benoit 'BoD' Lubek (BoD@JRAF.org)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,45 +23,55 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.webpipes.engine.step.net
+package org.jraf.webpipes.engine.recipe
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import org.jraf.webpipes.api.Step
+import org.jraf.webpipes.engine.execute.StepExecutor
 import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.httpClient
-import org.jraf.webpipes.engine.util.jsonObject
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
-import org.jraf.webpipes.engine.util.stringOrNull
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class UrlTextStep : Step {
+class RecipeExecutor {
   private val logger = classLogger()
 
-  override suspend fun execute(context: JsonObject): JsonObject {
-    val url: String = context.string("url")
-    logger.debug("Fetching {}", url)
-    val request = Request.Builder()
-      .url(url)
-      .apply {
-        context.jsonObject("headers", JsonObject(emptyMap())).let { headers ->
-          for ((key, value) in headers) {
-            addHeader(key, value.string)
-          }
-        }
-      }
-      .apply {
-        val body: String? = context.stringOrNull("body")
-        body?.let {
-          post(it.toRequestBody(null))
-        }
-      }
-      .build()
+  private val recipeContexts = mutableMapOf<String, JsonObject>()
+
+  suspend fun executeRecipe(
+    recipeId: String,
+    requestUrl: String,
+    queryParams: Map<String, String>,
+  ): ExecutionResult {
+    logger.debug("Executing recipe {}", recipeId)
+    var context = recipeContexts.getOrPut(recipeId) {
+      downloadRecipe(recipeId)
+    }
+    recipeContexts[recipeId] = StepExecutor()
+      .execute(
+        context +
+          ("stepId" to context.string("startStepId")) +
+          ("requestUrl" to requestUrl) +
+          JsonObject(queryParams.mapValues { JsonPrimitive(it.value) }),
+      )
+    context = recipeContexts[recipeId]!!
+    val resultFieldName = context.string("resultFieldName", "text")
+    return ExecutionResult(
+      body = context.string(resultFieldName),
+      contentType = context.string("resultContentType", "text/plain"),
+    )
+  }
+
+  private suspend fun downloadRecipe(recipeId: String): JsonObject {
+    logger.debug("Downloading recipe {}", recipeId)
+    val request = Request.Builder().url(recipeId).build()
     val call = httpClient.newCall(request)
     val response: Response = try {
       suspendCancellableCoroutine { continuation ->
@@ -75,13 +85,18 @@ class UrlTextStep : Step {
         }
       }
     } catch (e: Exception) {
-      logger.error("Failed to fetch $url", e)
+      logger.error("Failed to download recipe $recipeId", e)
       throw e
     }
 
     return response.use { resp ->
-      val body = resp.body?.string() ?: throw Exception("Failed to fetch $url: empty body")
-      context + ("text" to body)
+      val body = resp.body?.string() ?: throw Exception("Failed to read response body")
+      Json.parseToJsonElement(body).jsonObject
     }
   }
+
+  data class ExecutionResult(
+    val body: String,
+    val contentType: String,
+  )
 }

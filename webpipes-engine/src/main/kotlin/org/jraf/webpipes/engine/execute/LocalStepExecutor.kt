@@ -23,26 +23,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.webpipes.engine.step.json
+package org.jraf.webpipes.engine.execute
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
-import org.jraf.webpipes.engine.util.jsonObject
-import org.jraf.webpipes.engine.util.plus
-import org.jraf.webpipes.engine.util.string
+import org.jraf.webpipes.engine.util.classLogger
 
-private val json = Json {
-  prettyPrint = true
-}
+class LocalStepExecutor(
+  private val type: String,
+) : Step {
+  private val logger = classLogger()
 
-class JsonToTextStep : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
-    val inputFieldName = context.string("inputFieldName", "json")
-    val outputFieldName = context.string("outputFieldName", "text")
-    val jsonElement = context.jsonObject(inputFieldName)
-    val text = json.encodeToString(jsonElement)
-    return context + (outputFieldName to text)
+    val stepInstance = Class.forName(type).getDeclaredConstructor().newInstance() as Step
+    logger.debug("Executing local step {}", stepInstance)
+    return stepInstance.execute(JsonObject(context))
   }
 }

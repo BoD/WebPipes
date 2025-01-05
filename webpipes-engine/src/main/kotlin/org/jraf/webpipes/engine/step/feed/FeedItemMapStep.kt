@@ -30,7 +30,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
@@ -39,9 +38,9 @@ import org.jraf.webpipes.engine.util.jsonArray
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
 
-class FeedItemMapStep : Step {
-  private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+class FeedItemMapStep : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
     val mapperId = context.string("mapperId")
     val mapper = StepExecutor()
@@ -58,9 +57,5 @@ class FeedItemMapStep : Step {
           },
         )
       )
-  }
-
-  override fun close() {
-    coroutineScope.cancel()
   }
 }

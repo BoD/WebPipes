@@ -1,0 +1,110 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/atom+xml",
+  "steps": [
+    {
+      "id": "createSessionBody",
+      "type": "local:org.jraf.webpipes.engine.step.text.BuildStringFromContextFields",
+      "configuration": {
+        "template": "{\"identifier\": \"{{identifier}}\", \"password\": \"{{password}}\"}",
+        "outputFieldName": "body"
+      }
+    },
+    {
+      "id": "createSession",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "configuration": {
+        "url": "https://bsky.social/xrpc/com.atproto.server.createSession",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "addAuthorizationHeader",
+      "type": "local:org.jraf.webpipes.main.bsky.BlueSkyAddAuthorizationHeaderStep"
+    },
+    {
+      "id": "removeBody",
+      "type": "local:org.jraf.webpipes.engine.step.core.RemoveFromContextStep",
+      "configuration": {
+        "fieldName": "body"
+      }
+    },
+    {
+      "id": "getListFeed",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "configuration": {
+        "url": "https://bsky.social/xrpc/app.bsky.feed.getListFeed?list=at%3A%2F%2Fdid%3Aplc%3Azrwjh3urruteuvjonaajoq3r%2Fapp.bsky.graph.list%2F3lbclce6ypy2p&limit=30"
+      }
+    },
+    {
+      "id": "listFeedTextToJson",
+      "type": "local:org.jraf.webpipes.engine.step.json.TextToJsonStep"
+    },
+    {
+      "id": "blueSkyJsonToFeed",
+      "type": "local:org.jraf.webpipes.main.bsky.BlueSkyJsonToFeedStep"
+    },
+    {
+      "id": "mergeFeeds",
+      "type": "local:org.jraf.webpipes.engine.step.feed.MergeFeedsStep"
+    },
+    {
+      "id": "feedMaxItems",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedMaxItemsStep"
+    },
+    {
+      "id": "saveExistingFeed",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "feed",
+        "targetFieldName": "existingFeed"
+      }
+    },
+    {
+      "id": "addAtomLink",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "requestUrl",
+        "targetFieldName": "atomLink"
+      }
+    },
+    {
+      "id": "atom",
+      "type": "local:org.jraf.webpipes.atom.AtomStep",
+      "configuration": {
+        "atomTitle": "Bluesky",
+        "atomDescription": "Bluesky",
+        "atomEntriesAuthor": "WebPipes"
+      }
+    },
+    {
+      "id": "cachedChain",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "createSessionBody",
+          "createSession",
+          "addAuthorizationHeader",
+          "removeBody",
+          "getListFeed",
+          "listFeedTextToJson",
+          "blueSkyJsonToFeed",
+          "mergeFeeds",
+          "feedMaxItems",
+          "saveExistingFeed",
+          "addAtomLink",
+          "atom"
+        ]
+      }
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "cachedStepId": "cachedChain"
+      }
+    }
+  ]
+}

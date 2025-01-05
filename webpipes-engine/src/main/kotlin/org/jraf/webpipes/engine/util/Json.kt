@@ -71,3 +71,8 @@ inline operator fun <reified T : Any> JsonObject.plus(element: Pair<String, T?>)
       }
     } ?: JsonNull)),
   )
+
+operator fun JsonObject.plus(other: JsonObject): JsonObject =
+  JsonObject(
+    (this as Map<String, JsonElement>) + (other as Map<String, JsonElement>),
+  )

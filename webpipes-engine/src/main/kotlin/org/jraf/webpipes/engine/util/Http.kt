@@ -7,7 +7,7 @@
  *                              /___/
  * repository.
  *
- * Copyright (C) 2024-present Benoit 'BoD' Lubek (BoD@JRAF.org)
+ * Copyright (C) 2025-present Benoit 'BoD' Lubek (BoD@JRAF.org)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,26 +23,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.webpipes.engine.step.json
+package org.jraf.webpipes.engine.util
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import org.jraf.webpipes.api.Step
-import org.jraf.webpipes.engine.util.jsonObject
-import org.jraf.webpipes.engine.util.plus
-import org.jraf.webpipes.engine.util.string
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
-private val json = Json {
-  prettyPrint = true
-}
-
-class JsonToTextStep : Step {
-  override suspend fun execute(context: JsonObject): JsonObject {
-    val inputFieldName = context.string("inputFieldName", "json")
-    val outputFieldName = context.string("outputFieldName", "text")
-    val jsonElement = context.jsonObject(inputFieldName)
-    val text = json.encodeToString(jsonElement)
-    return context + (outputFieldName to text)
-  }
-}
+/**
+ * Single shared [OkHttpClient].
+ */
+val httpClient = OkHttpClient.Builder()
+  .connectTimeout(60, TimeUnit.SECONDS)
+  .readTimeout(60, TimeUnit.SECONDS)
+  .writeTimeout(60, TimeUnit.SECONDS)
+  .build()

@@ -1,0 +1,169 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/atom+xml",
+  "steps": [
+    {
+      "id": "downloadPage",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "configuration": {
+        "url": "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages="
+      }
+    },
+    {
+      "id": "createFeed",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlFeedStep",
+      "configuration": {
+        "baseUrl": "https://www.ugc.fr/filmsAjaxAction!getFilmsAndFilters.action?filter=stillOnDisplay&page=30010&cinemaId=&reset=false&__multiselect_versions=&labels=UGC%20Culte&__multiselect_labels=&__multiselect_groupeImages=",
+        "aElementsXPath": "//div[@class='info-wrapper']//a"
+      }
+    },
+    {
+      "id": "downloadMoviePage",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep"
+    },
+    {
+      "id": "mapMovieDownloadToFeedItemBody",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapFieldStep",
+      "configuration": {
+        "mapperId": "downloadMoviePage",
+        "inFeedItemFieldName": "link",
+        "inContextFieldName": "url",
+        "outFeedItemFieldName": "body",
+        "outContextFieldName": "text"
+      }
+    },
+    {
+      "id": "mapperDownloadMoviePage",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapStep",
+      "configuration": {
+        "mapperId": "mapMovieDownloadToFeedItemBody"
+      }
+    },
+    {
+      "id": "addIsLyon",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemTextContainsStep",
+      "configuration": {
+        "inFeedItemFieldName": "body",
+        "outFeedItemFieldName": "isLyon",
+        "textToFind": "lyon"
+      }
+    },
+    {
+      "id": "mapperAddIsLyon",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapStep",
+      "configuration": {
+        "mapperId": "addIsLyon"
+      }
+    },
+    {
+      "id": "filterIsLyon",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedFilterStep",
+      "configuration": {
+        "conditionFeedItemFieldName": "isLyon"
+      }
+    },
+    {
+      "id": "cropMovieBody",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlCropStep",
+      "configuration": {
+        "xPath": "//div[@class='group-info d-none d-md-block'][4]/p[2]",
+        "extractText": true
+      }
+    },
+    {
+      "id": "mapMovieCroppedBodyToFeedItemBody",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapFieldStep",
+      "configuration": {
+        "mapperId": "cropMovieBody",
+        "inFeedItemFieldName": "body",
+        "inContextFieldName": "text",
+        "outFeedItemFieldName": "body",
+        "outContextFieldName": "text"
+      }
+    },
+    {
+      "id": "putLinkIntoContext",
+      "type": "local:org.jraf.webpipes.engine.step.feed.AddFeedItemFieldToContextStep",
+      "configuration": {
+        "contextFieldName": "baseUrl",
+        "feedItemFieldName": "link"
+      }
+    },
+    {
+      "id": "putLinkIntoContextAndMapMovieCroppedBodyToFeedItemBody",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "putLinkIntoContext",
+          "mapMovieCroppedBodyToFeedItemBody"
+        ]
+      }
+    },
+    {
+      "id": "mapperCropMovieBody",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapStep",
+      "configuration": {
+        "mapperId": "putLinkIntoContextAndMapMovieCroppedBodyToFeedItemBody"
+      }
+    },
+    {
+      "id": "mergeFeeds",
+      "type": "local:org.jraf.webpipes.engine.step.feed.MergeFeedsStep"
+    },
+    {
+      "id": "feedMaxItems",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedMaxItemsStep"
+    },
+    {
+      "id": "saveExistingFeed",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "feed",
+        "targetFieldName": "existingFeed"
+      }
+    },
+    {
+      "id": "addAtomLink",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "requestUrl",
+        "targetFieldName": "atomLink"
+      }
+    },
+    {
+      "id": "atom",
+      "type": "local:org.jraf.webpipes.atom.AtomStep",
+      "configuration": {
+        "atomTitle": "UGC Culte",
+        "atomDescription": "UGC Culte",
+        "atomEntriesAuthor": "WebPipes"
+      }
+    },
+    {
+      "id": "cachedChain",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "downloadPage",
+          "createFeed",
+          "mapperDownloadMoviePage",
+          "mapperAddIsLyon",
+          "filterIsLyon",
+          "mapperCropMovieBody",
+          "mergeFeeds",
+          "feedMaxItems",
+          "saveExistingFeed",
+          "addAtomLink",
+          "atom"
+        ]
+      }
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "cachedStepId": "cachedChain"
+      }
+    }
+  ]
+}

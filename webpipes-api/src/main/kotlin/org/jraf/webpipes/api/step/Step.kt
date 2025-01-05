@@ -27,7 +27,6 @@ package org.jraf.webpipes.api
 
 import kotlinx.serialization.json.JsonObject
 
-fun interface Step : AutoCloseable {
+fun interface Step {
   suspend fun execute(context: JsonObject): JsonObject
-  override fun close() {}
 }

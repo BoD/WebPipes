@@ -23,44 +23,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jraf.webpipes.engine.step.net
+package org.jraf.webpipes.engine.execute
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.httpClient
-import org.jraf.webpipes.engine.util.jsonObject
-import org.jraf.webpipes.engine.util.plus
-import org.jraf.webpipes.engine.util.string
-import org.jraf.webpipes.engine.util.stringOrNull
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class UrlTextStep : Step {
+class RemoteStepExecutor(
+  private val stepUrl: String,
+) : Step {
   private val logger = classLogger()
 
   override suspend fun execute(context: JsonObject): JsonObject {
-    val url: String = context.string("url")
-    logger.debug("Fetching {}", url)
+    logger.debug("Executing remote step {}", stepUrl)
     val request = Request.Builder()
-      .url(url)
-      .apply {
-        context.jsonObject("headers", JsonObject(emptyMap())).let { headers ->
-          for ((key, value) in headers) {
-            addHeader(key, value.string)
-          }
-        }
-      }
-      .apply {
-        val body: String? = context.stringOrNull("body")
-        body?.let {
-          post(it.toRequestBody(null))
-        }
-      }
+      .url(stepUrl)
+      .addHeader("Content-Type", "application/json")
+      .post(Json.encodeToString(context).toRequestBody("application/json".toMediaTypeOrNull()))
       .build()
     val call = httpClient.newCall(request)
     val response: Response = try {
@@ -75,13 +65,13 @@ class UrlTextStep : Step {
         }
       }
     } catch (e: Exception) {
-      logger.error("Failed to fetch $url", e)
+      logger.error("Failed to execute remote step $stepUrl", e)
       throw e
     }
 
     return response.use { resp ->
-      val body = resp.body?.string() ?: throw Exception("Failed to fetch $url: empty body")
-      context + ("text" to body)
+      val body = resp.body?.string() ?: throw Exception("Failed to read response body")
+      Json.parseToJsonElement(body).jsonObject
     }
   }
 }

@@ -1,0 +1,149 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/json",
+  "steps": [
+    {
+      "id": "downloadPage",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "configuration": {
+        "url": "https://www.merriam-webster.com/word-of-the-day"
+      }
+    },
+    {
+      "id": "extractWord",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//h2[@class='word-header-txt']",
+        "outputFieldName": "word"
+      }
+    },
+    {
+      "id": "extractType",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//span[@class='main-attr']",
+        "outputFieldName": "type"
+      }
+    },
+    {
+      "id": "extractPronunciation",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//span[@class='word-syllables']",
+        "outputFieldName": "pronunciation"
+      }
+    },
+    {
+      "id": "extractDefinition",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//div[@class='wod-definition-container']/p[1]",
+        "outputFieldName": "definition"
+      }
+    },
+    {
+      "id": "extractInContext",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//div[@class='wotd-examples']/div[1]/p[1]",
+        "outputFieldName": "inContext"
+      }
+    },
+    {
+      "id": "extractExample",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//div[@class='wod-definition-container']/p[2]",
+        "outputFieldName": "example"
+      }
+    },
+    {
+      "id": "substringExample",
+      "type": "local:org.jraf.webpipes.engine.step.text.SubstringStep",
+      "configuration": {
+        "inputFieldName": "example",
+        "outputFieldName": "example",
+        "startIndex": 3
+      }
+    },
+    {
+      "id": "removeAFromInContext1",
+      "type": "local:org.jraf.webpipes.engine.step.text.ReplaceStep",
+      "configuration": {
+        "inputFieldName": "inContext",
+        "outputFieldName": "inContext",
+        "regex": "<a",
+        "replacement": "<i"
+      }
+    },
+    {
+      "id": "removeAFromInContext2",
+      "type": "local:org.jraf.webpipes.engine.step.text.ReplaceStep",
+      "configuration": {
+        "inputFieldName": "inContext",
+        "outputFieldName": "inContext",
+        "regex": "</a",
+        "replacement": "</i"
+      }
+    },
+    {
+      "id": "contextToJson",
+      "type": "local:org.jraf.webpipes.engine.step.json.ContextToJsonStep",
+      "configuration": {
+        "outputFieldName": "json"
+      }
+    },
+    {
+      "id": "filterJsonKeys",
+      "type": "local:org.jraf.webpipes.engine.step.json.JsonFilterKeysStep",
+      "configuration": {
+        "inputFieldName": "json",
+        "allowedKeys": [
+          "word",
+          "type",
+          "pronunciation",
+          "definition",
+          "example",
+          "inContext"
+        ]
+      }
+    },
+    {
+      "id": "jsonToText",
+      "type": "local:org.jraf.webpipes.engine.step.json.JsonToTextStep",
+      "configuration": {
+        "inputFieldName": "json",
+        "outputFieldName": "text"
+      }
+    },
+    {
+      "id": "cachedChain",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "downloadPage",
+          "extractWord",
+          "extractType",
+          "extractPronunciation",
+          "extractDefinition",
+          "extractInContext",
+          "extractExample",
+          "substringExample",
+          "removeAFromInContext1",
+          "removeAFromInContext2",
+          "contextToJson",
+          "filterJsonKeys",
+          "jsonToText"
+        ]
+      }
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "cachedStepId": "cachedChain",
+        "maxAge": 10800
+      }
+    }
+  ]
+}
