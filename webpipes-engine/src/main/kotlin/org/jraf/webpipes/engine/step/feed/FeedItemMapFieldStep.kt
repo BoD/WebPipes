@@ -32,6 +32,11 @@ import org.jraf.webpipes.engine.util.jsonObject
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
 
+/**
+ * Given a feed item `feedItem`, executes the step `mapperId`.
+ * The feed item field `inFeedItemFieldName` is put into context with the name specified in `inContextFieldName`.
+ * The field `outContextFieldName` of the result of executing the step is set to the feed item with the name specified in `outFeedItemFieldName`.
+ */
 class FeedItemMapFieldStep : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
     val mapperId = context.string("mapperId")

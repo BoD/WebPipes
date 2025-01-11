@@ -30,18 +30,23 @@ import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.boolean
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
+import org.jraf.webpipes.engine.util.stringOrNull
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import us.codecraft.xsoup.Xsoup
 
+/**
+ * Given an HTML text in `text`, extracts the content of the first element matching the XPath expression in `xPath` and stores it in the
+ * `text` field.
+ */
 class HtmlCropStep : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
     val text = context.string("text")
-    val baseUrl = context.string("baseUrl")
+    val baseUrl = context.stringOrNull("baseUrl")
     val xPath = context.string("xPath")
     val extractText = context.boolean("extractText", false)
     val xPathEvaluator = Xsoup.compile(xPath)
-    val document: Document = Jsoup.parse(text, baseUrl)
+    val document: Document = if (baseUrl != null) Jsoup.parse(text, baseUrl) else Jsoup.parse(text)
     val element = xPathEvaluator.evaluate(document).elements.first()
     val newText = (if (extractText) element?.text() else element?.outerHtml()) ?: ""
     return context + ("text" to newText)

@@ -1,0 +1,130 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/atom+xml",
+  "steps": [
+    {
+      "id": "downloadPage",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "configuration": {
+        "url": "https://billetterie.radiant-bellevue.fr/fr"
+      }
+    },
+    {
+      "id": "createFeed",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlFeedStep",
+      "configuration": {
+        "baseUrl": "https://billetterie.radiant-bellevue.fr/fr",
+        "aElementsXPath": "//div[@class='calendar-group-item field__item']//a[@class='btn btn-primary available js-main-link']"
+      }
+    },
+    {
+      "id": "downloadShowPage",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep"
+    },
+    {
+      "id": "mapShowDownloadToFeedItemTitle",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapFieldStep",
+      "configuration": {
+        "mapperId": "downloadShowPage",
+        "inFeedItemFieldName": "link",
+        "inContextFieldName": "url",
+        "outFeedItemFieldName": "title",
+        "outContextFieldName": "text"
+      }
+    },
+    {
+      "id": "mapperDownloadShowPage",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapStep",
+      "configuration": {
+        "mapperId": "mapShowDownloadToFeedItemTitle"
+      }
+    },
+    {
+      "id": "cropShowTitle",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlCropStep",
+      "configuration": {
+        "xPath": "//h1[@class='title']",
+        "extractText": true
+      }
+    },
+    {
+      "id": "mapShowCroppedBodyToFeedItemBody",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapFieldStep",
+      "configuration": {
+        "mapperId": "cropShowTitle",
+        "inFeedItemFieldName": "title",
+        "inContextFieldName": "text",
+        "outFeedItemFieldName": "title",
+        "outContextFieldName": "text"
+      }
+    },
+    {
+      "id": "mapperCropShowTitle",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedItemMapStep",
+      "configuration": {
+        "mapperId": "mapShowCroppedBodyToFeedItemBody"
+      }
+    },
+    {
+      "id": "mergeFeeds",
+      "type": "local:org.jraf.webpipes.engine.step.feed.MergeFeedsStep"
+    },
+    {
+      "id": "feedMaxItems",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedMaxItemsStep",
+      "configuration": {
+        "maxItems": 250
+      }
+    },
+    {
+      "id": "saveExistingFeed",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "feed",
+        "targetFieldName": "existingFeed"
+      }
+    },
+    {
+      "id": "addAtomLink",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "requestUrl",
+        "targetFieldName": "atomLink"
+      }
+    },
+    {
+      "id": "atom",
+      "type": "local:org.jraf.webpipes.atom.AtomStep",
+      "configuration": {
+        "atomTitle": "Radiant Bellevue",
+        "atomDescription": "Radiant Bellevue",
+        "atomEntriesAuthor": "WebPipes"
+      }
+    },
+    {
+      "id": "cachedChain",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "downloadPage",
+          "createFeed",
+          "mapperDownloadShowPage",
+          "mapperCropShowTitle",
+          "mergeFeeds",
+          "feedMaxItems",
+          "saveExistingFeed",
+          "addAtomLink",
+          "atom"
+        ]
+      }
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "maxAge": 14400,
+        "cachedStepId": "cachedChain"
+      }
+    }
+  ]
+}
