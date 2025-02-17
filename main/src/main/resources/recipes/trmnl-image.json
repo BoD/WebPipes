@@ -10,7 +10,7 @@
       "id": "buildString",
       "type": "local:org.jraf.webpipes.engine.step.text.BuildStringFromContextFields",
       "configuration": {
-        "template": "{\"url\":\"https://www.dropbox.com/scl/fi/d8sz7wy2nsghh43kkvafu/trmnl.jpg?rlkey=c7wdwmh10l4lrmt4gddiypg7t&dl=1&a={{currentTimeMillis}}\"}",
+        "template": "{\"url\":\"https://www.dropbox.com/scl/fi/kef7dagrvad7mipu2bmsg/trmnl.jpg?rlkey=snq3zciic4suehmmh9e1srvlg&dl=1&a={{currentTimeMillis}}\"}",
         "outputFieldName": "text"
       }
     },
