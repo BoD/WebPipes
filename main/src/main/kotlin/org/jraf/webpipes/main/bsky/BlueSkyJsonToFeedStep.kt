@@ -23,8 +23,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-@file:OptIn(ExperimentalSerializationApi::class)
-
 package org.jraf.webpipes.main.bsky
 
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -62,6 +60,7 @@ class BlueSkyJsonToFeedStep : Step {
         put("title", "$authorDisplayName - $link")
         put("link", link)
         put("date", Instant.parse(record["createdAt"]!!.string).toString())
+        @OptIn(ExperimentalSerializationApi::class)
         put("body", null)
         put("author", authorHandle)
       }

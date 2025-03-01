@@ -1,0 +1,88 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/atom+xml",
+  "steps": [
+    {
+      "id": "downloadPage",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "configuration": {
+        "url": "https://www.jambase.com/wp-admin/admin-ajax.php?action=jb_get_concerts_finder_results&form_data%5Blocation%5D=Lyon%2C%20Auvergne-Rh%C3%B4ne-Alpes%2C%20FR&form_data%5Blat%5D=45.77&form_data%5Blng%5D=4.83&form_data%5Bradius%5D=20&form_data%5Bdate-first%5D=20250301&form_data%5Bdate-last%5D=20261128&form_data%5Bdate-preset%5D=all&form_data%5Bband-filter%5D=all&form_data%5Bnewly-announced%5D=&form_data%5Btype-filter%5D="
+      }
+    },
+    {
+      "id": "textToJson",
+      "type": "local:org.jraf.webpipes.engine.step.json.TextToJsonStep"
+    },
+    {
+      "id": "jsonToFeed",
+      "type": "local:org.jraf.webpipes.engine.step.feed.JsonToFeedStep",
+      "configuration": {
+        "itemsPath": "data.results.posts",
+        "titleFieldName": "title",
+        "linkFieldName": "slug",
+        "linkPrefix": "https://www.jambase.com/show/",
+        "dateFieldName": "post_date_gmt"
+      }
+    },
+    {
+      "id": "mergeFeeds",
+      "type": "local:org.jraf.webpipes.engine.step.feed.MergeFeedsStep"
+    },
+    {
+      "id": "feedMaxItems",
+      "type": "local:org.jraf.webpipes.engine.step.feed.FeedMaxItemsStep",
+      "configuration": {
+        "maxItems": 250
+      }
+    },
+    {
+      "id": "saveExistingFeed",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "feed",
+        "targetFieldName": "existingFeed"
+      }
+    },
+    {
+      "id": "addAtomLink",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "requestUrl",
+        "targetFieldName": "atomLink"
+      }
+    },
+    {
+      "id": "atom",
+      "type": "local:org.jraf.webpipes.atom.AtomStep",
+      "configuration": {
+        "atomTitle": "BandsInTown Lyon",
+        "atomDescription": "BandsInTown Lyon",
+        "atomEntriesAuthor": "WebPipes"
+      }
+    },
+    {
+      "id": "cachedChain",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "downloadPage",
+          "textToJson",
+          "jsonToFeed",
+          "mergeFeeds",
+          "feedMaxItems",
+          "saveExistingFeed",
+          "addAtomLink",
+          "atom"
+        ]
+      }
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "maxAge": 14400,
+        "cachedStepId": "cachedChain"
+      }
+    }
+  ]
+}

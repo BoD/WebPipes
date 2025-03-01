@@ -40,10 +40,14 @@ class Main {
     logger.info("Starting server")
     Server(
       recipeExecutor = { requestParams ->
-        runCatching { executeRecipe(requestParams) }.getOrNull()
+        runCatching { executeRecipe(requestParams) }
+          .onFailure { logger.warn("Recipe execution failed", it) }
+          .getOrNull()
       },
       stepExecutor = { path, context ->
-        runCatching { LocalStepExecutor(path).execute(context) }.getOrNull()
+        runCatching { LocalStepExecutor(path).execute(context) }
+          .onFailure { logger.warn("Step execution failed", it) }
+          .getOrNull()
       },
     ).start()
   }

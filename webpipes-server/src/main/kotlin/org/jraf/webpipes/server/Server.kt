@@ -61,10 +61,8 @@ private const val DEFAULT_PORT = 8042
 
 private const val ENV_PORT = "PORT"
 
-private const val PATH_RECIPE = "recipe"
 private const val PATH_RECIPE_ID = "recipeId"
 
-private const val PATH_STEP = "step"
 private const val PATH_STEP_ID = "stepId"
 
 class Server(
@@ -137,7 +135,7 @@ class Server(
     }
 
     routing {
-      get("{$PATH_RECIPE}/{$PATH_RECIPE_ID}") {
+      get("/recipe/{$PATH_RECIPE_ID}") {
         val recipeId = call.parameters[PATH_RECIPE_ID] ?: run {
           call.response.status(HttpStatusCode.NotFound)
           return@get
@@ -161,7 +159,7 @@ class Server(
         )
       }
 
-      post("{$PATH_STEP}/{$PATH_STEP_ID}") {
+      post("/step/{$PATH_STEP_ID}") {
         val stepType = call.parameters[PATH_STEP_ID] ?: run {
           call.response.status(HttpStatusCode.NotFound)
           return@post

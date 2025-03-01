@@ -76,3 +76,11 @@ operator fun JsonObject.plus(other: JsonObject): JsonObject =
   JsonObject(
     (this as Map<String, JsonElement>) + (other as Map<String, JsonElement>),
   )
+
+fun JsonObject.jsonElementAtPath(path: List<String>): JsonElement? {
+  var current: JsonElement = this
+  for (key in path) {
+    current = (current as? JsonObject)?.get(key) ?: return null
+  }
+  return current
+}

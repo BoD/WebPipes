@@ -85,7 +85,7 @@ class RecipeExecutor {
         }
       }
     } catch (e: Exception) {
-      logger.error("Failed to download recipe $recipeId", e)
+      logger.warn("Failed to download recipe $recipeId", e)
       throw e
     }
 
