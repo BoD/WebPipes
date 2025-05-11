@@ -1,0 +1,30 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/json",
+  "steps": [
+    {
+      "id": "theMovieDbRandomBackdrop",
+      "type": "local:org.jraf.webpipes.main.themoviedb.TheMovieDbRandomBackdropStep",
+      "configuration": {
+        "apiToken": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3OWQyNjA4ZmVjYWE3YjM1ODE5ODY0MTIzNDFiMWY5MyIsIm5iZiI6MTMwODU3NjY2My4wLCJzdWIiOiI0ZGZmNGI5NzdiOWFhMTA2MGIwMDI1ZGEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.5UVAwOt9WiUs-obXvDID2mQSYRUPDtSskVb55W1d7_k"
+      }
+    },
+    {
+      "id": "cachedChain",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "theMovieDbRandomBackdrop"
+        ]
+      }
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "cachedStepId": "cachedChain",
+        "maxAge": 10800
+      }
+    }
+  ]
+}

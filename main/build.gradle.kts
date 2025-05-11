@@ -21,6 +21,12 @@ dependencies {
   implementation("org.slf4j:slf4j-api:_")
   implementation("org.slf4j:slf4j-simple:_")
 
+  // Coroutines
+  implementation(KotlinX.coroutines.core)
+
+  // OKHttp
+  implementation(Square.okHttp3)
+
   // WebPipes
   implementation(project(":webpipes-server"))
   implementation(project(":webpipes-engine"))
