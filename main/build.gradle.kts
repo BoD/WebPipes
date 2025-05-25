@@ -24,13 +24,16 @@ dependencies {
   // Coroutines
   implementation(KotlinX.coroutines.core)
 
-  // OKHttp
-  implementation(Square.okHttp3)
-
   // WebPipes
   implementation(project(":webpipes-server"))
   implementation(project(":webpipes-engine"))
   implementation(project(":webpipes-atom"))
+
+  // OKHttp
+  implementation(Square.okHttp3)
+
+  // Dropbox
+  implementation("com.dropbox.core:dropbox-core-sdk:_")
 }
 
 docker {

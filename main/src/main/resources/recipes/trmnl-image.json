@@ -3,23 +3,14 @@
   "resultContentType": "application/json",
   "steps": [
     {
-      "id": "currentTimeMillis",
-      "type": "local:org.jraf.webpipes.engine.step.datetime.CurrentTimeMillisStep"
-    },
-    {
       "id": "buildString",
-      "type": "local:org.jraf.webpipes.engine.step.text.BuildStringFromContextFields",
-      "configuration": {
-        "template": "{\"url\":\"https://www.dropbox.com/scl/fi/6rrbd6hoa872q22uvnk72/trmnl.jpg?rlkey=h8ngqwz1be5wab8f6hnxx2asv&dl=1&a={{currentTimeMillis}}\"}",
-        "outputFieldName": "text"
-      }
+      "type": "local:org.jraf.webpipes.main.dropbox.DropboxLatestImageStep"
     },
     {
       "id": "cachedChain",
       "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
       "configuration": {
         "chain": [
-          "currentTimeMillis",
           "buildString"
         ]
       }

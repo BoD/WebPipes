@@ -36,7 +36,6 @@ import okhttp3.Response
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.httpClient
-import org.jraf.webpipes.engine.util.int
 import org.jraf.webpipes.engine.util.jsonArray
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
@@ -83,12 +82,13 @@ class TheMovieDbRandomBackdropStep : Step {
     val url =
       "https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=vote_average.desc&vote_count.gte=1000&without_genres=16"
     val json = fetch(url = url, apiToken = apiToken)
-    val totalResults = json.int("total_results")
+//    val totalResults = json.int("total_results")
+    val maxSize = 500
     val resultsPerPage = json.jsonArray("results").size
 
     // Make the seed depend on the current day
     val seed = Instant.now().toString().substring(0, 10).replace("-", "").toInt()
-    val randomIndex = (0..<totalResults).random(Random(seed))
+    val randomIndex = (0..<maxSize).random(Random(seed))
     val randomPage = randomIndex / resultsPerPage
     val randomIndexOnPage = randomIndex % resultsPerPage
     val randomUrl =
