@@ -15,7 +15,7 @@ DOCKER_USERNAME=<your docker hub login> DOCKER_PASSWORD=<your docker hub passwor
 
 ```
 docker pull bodlulu/webpipes
-docker run -p <PORT TO LISTEN TO>:8080 bodlulu/github-to-bookmarks
+docker run -p <PORT TO LISTEN TO>:8080 bodlulu/webpipes
 ```
 
 ## Licence

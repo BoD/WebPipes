@@ -89,7 +89,7 @@ class TheMovieDbRandomBackdropStep : Step {
     // Make the seed depend on the current day
     val seed = Instant.now().toString().substring(0, 10).replace("-", "").toInt()
     val randomIndex = (0..<maxSize).random(Random(seed))
-    val randomPage = randomIndex / resultsPerPage
+    val randomPage = randomIndex / resultsPerPage + 1
     val randomIndexOnPage = randomIndex % resultsPerPage
     val randomUrl =
       "https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=$randomPage&sort_by=vote_average.desc&vote_count.gte=1000&without_genres=16"
