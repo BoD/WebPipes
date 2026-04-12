@@ -71,7 +71,7 @@ class TheMovieDbRandomBackdropStep : Step {
       throw e
     }
     val body = response.use { resp ->
-      resp.body?.string() ?: throw Exception("Failed to fetch $url: empty body")
+      resp.body.string()
     }
     return Json.parseToJsonElement(body).jsonObject
   }

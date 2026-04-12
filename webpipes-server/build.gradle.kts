@@ -1,5 +1,5 @@
 plugins {
-  kotlin("jvm")
+  alias(libs.plugins.kotlin.jvm)
 }
 
 kotlin {
@@ -8,17 +8,17 @@ kotlin {
 
 dependencies {
   // Ktor
-  implementation(Ktor.server.core)
-  implementation(Ktor.server.netty)
-  implementation(Ktor.server.defaultHeaders)
-  implementation(Ktor.server.contentNegotiation)
-  implementation(Ktor.server.statusPages)
-  implementation(Ktor.server.callLogging)
-  implementation(Ktor.plugins.serialization.kotlinx.json)
+  implementation(libs.ktor.server.core)
+  implementation(libs.ktor.server.netty)
+  implementation(libs.ktor.server.defaultHeaders)
+  implementation(libs.ktor.server.contentNegotiation)
+  implementation(libs.ktor.server.statusPages)
+  implementation(libs.ktor.server.callLogging)
+  implementation(libs.ktor.serialization.kotlinxJson)
 
   // Json
   implementation(KotlinX.serialization.json)
 
   // Logging
-  implementation("org.slf4j:slf4j-api:_")
+  implementation(libs.slf4j.api)
 }

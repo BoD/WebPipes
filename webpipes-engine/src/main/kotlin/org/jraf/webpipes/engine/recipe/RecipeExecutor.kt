@@ -90,7 +90,7 @@ class RecipeExecutor {
     }
 
     return response.use { resp ->
-      val body = resp.body?.string() ?: throw Exception("Failed to read response body")
+      val body = resp.body.string()
       Json.parseToJsonElement(body).jsonObject
     }
   }

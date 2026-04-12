@@ -1,6 +1,6 @@
 plugins {
-  kotlin("jvm") apply false
-  id("com.bmuschko.docker-java-application") apply false
+  alias(libs.plugins.kotlin.jvm).apply(false)
+  alias(libs.plugins.dockerJavaApplication).apply(false)
 }
 
 group = "org.jraf.webpipes"

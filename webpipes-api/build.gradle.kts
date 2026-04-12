@@ -1,5 +1,5 @@
 plugins {
-  kotlin("jvm")
+  alias(libs.plugins.kotlin.jvm)
 }
 
 kotlin {
@@ -8,5 +8,5 @@ kotlin {
 
 dependencies {
   // Json
-  api(KotlinX.serialization.json)
+  api(libs.kotlinx.serialization.json)
 }

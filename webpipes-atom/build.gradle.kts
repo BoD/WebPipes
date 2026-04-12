@@ -1,5 +1,5 @@
 plugins {
-  kotlin("jvm")
+  alias(libs.plugins.kotlin.jvm)
 }
 
 kotlin {
@@ -8,11 +8,11 @@ kotlin {
 
 dependencies {
   // Logging
-  implementation("org.slf4j:slf4j-api:_")
+  implementation(libs.slf4j.api)
 
   // WebPipes API
   implementation(project(":webpipes-engine"))
 
   // RSS / Atom
-  implementation("com.rometools:rome:_")
+  implementation(libs.rome)
 }

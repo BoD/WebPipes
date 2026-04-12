@@ -26,7 +26,6 @@
 package org.jraf.webpipes.engine.execute
 
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -70,7 +69,7 @@ class RemoteStepExecutor(
     }
 
     return response.use { resp ->
-      val body = resp.body?.string() ?: throw Exception("Failed to read response body")
+      val body = resp.body.string()
       Json.parseToJsonElement(body).jsonObject
     }
   }

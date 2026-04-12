@@ -80,7 +80,7 @@ class UrlTextStep : Step {
     }
 
     return response.use { resp ->
-      val body = resp.body?.string() ?: throw Exception("Failed to fetch $url: empty body")
+      val body = resp.body.string()
       context + ("text" to body)
     }
   }

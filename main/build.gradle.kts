@@ -3,9 +3,9 @@ import com.bmuschko.gradle.docker.tasks.image.Dockerfile
 import com.bmuschko.gradle.docker.tasks.image.Dockerfile.CopyFileInstruction
 
 plugins {
-  kotlin("jvm")
+  alias(libs.plugins.kotlin.jvm)
   id("application")
-  id("com.bmuschko.docker-java-application")
+  alias(libs.plugins.dockerJavaApplication)
 }
 
 kotlin {
@@ -18,11 +18,11 @@ application {
 
 dependencies {
   // Logging
-  implementation("org.slf4j:slf4j-api:_")
-  implementation("org.slf4j:slf4j-simple:_")
+  implementation(libs.slf4j.api)
+  implementation(libs.slf4j.simple)
 
   // Coroutines
-  implementation(KotlinX.coroutines.core)
+  implementation(libs.kotlinx.coroutines.core)
 
   // WebPipes
   implementation(project(":webpipes-server"))
@@ -33,13 +33,13 @@ dependencies {
   implementation(Square.okHttp3)
 
   // Dropbox
-  implementation("com.dropbox.core:dropbox-core-sdk:_")
+  implementation(libs.dropbox.core.sdk)
 }
 
 docker {
   javaApplication {
     // Use OpenJ9 instead of the default one
-    baseImage.set("adoptopenjdk/openjdk11-openj9:x86_64-ubuntu-jre-11.0.29_7_openj9-0.56.0")
+    baseImage.set("adoptopenjdk/openjdk11-openj9:x86_64-ubuntu-jre-11.0.30_7.1_openj9-0.57.0")
     maintainer.set("BoD <BoD@JRAF.org>")
     ports.set(listOf(8042))
     images.add("bodlulu/${rootProject.name}:latest")

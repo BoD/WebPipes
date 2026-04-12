@@ -1,5 +1,5 @@
 plugins {
-  kotlin("jvm")
+  alias(libs.plugins.kotlin.jvm)
 }
 
 kotlin {
@@ -8,16 +8,16 @@ kotlin {
 
 dependencies {
   // Coroutines
-  implementation(KotlinX.coroutines.core)
+  implementation(libs.kotlinx.coroutines.core)
 
   // Logging
-  implementation("org.slf4j:slf4j-api:_")
+  implementation(libs.slf4j.api)
 
   // OKHttp
-  implementation(Square.okHttp3)
+  implementation(libs.okhttp)
 
   // XSoup
-  implementation("us.codecraft:xsoup:_")
+  implementation(libs.xsoup)
 
   // WebPipes API
   api(project(":webpipes-api"))
