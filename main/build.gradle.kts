@@ -34,6 +34,9 @@ dependencies {
 
   // Dropbox
   implementation(libs.dropbox.core.sdk)
+
+  // OpenAI
+  implementation(libs.openai)
 }
 
 docker {

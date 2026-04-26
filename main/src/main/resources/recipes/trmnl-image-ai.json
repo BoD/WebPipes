@@ -3,10 +3,17 @@
   "resultContentType": "application/json",
   "steps": [
     {
+      "id": "generateImage",
+      "type": "local:org.jraf.webpipes.main.openai.OpenAIGenerateImageStep",
+      "configuration": {
+        "folder": "/Trmnl/AI"
+      }
+    },
+    {
       "id": "buildString",
       "type": "local:org.jraf.webpipes.main.dropbox.DropboxLatestImageStep",
       "configuration": {
-        "folder": "/Trmnl"
+        "folder": "/Trmnl/AI"
       }
     },
     {
@@ -14,6 +21,7 @@
       "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
       "configuration": {
         "chain": [
+          "generateImage",
           "buildString"
         ]
       }

@@ -25,13 +25,8 @@
 
 package org.jraf.webpipes.main.dropbox
 
-import com.dropbox.core.DbxAppInfo
-import com.dropbox.core.DbxRequestConfig
-import com.dropbox.core.DbxWebAuth
-import com.dropbox.core.TokenAccessType
-import com.dropbox.core.oauth.DbxCredential
-import com.dropbox.core.v2.DbxClientV2
 import com.dropbox.core.v2.files.FileMetadata
+import com.dropbox.core.v2.files.FolderMetadata
 import com.dropbox.core.v2.sharing.ListSharedLinksResult
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -39,8 +34,6 @@ import kotlinx.serialization.json.put
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.util.Date
 
 class DropboxLatestImageStep : Step {
@@ -48,10 +41,12 @@ class DropboxLatestImageStep : Step {
     val appKey: String = context.string("appKey")
     val appSecret: String = context.string("appSecret")
     val refreshToken: String = context.string("refreshToken")
+    val folder: String = context.string("folder")
     val url = getDropboxLatestImageUrl(
       appKey = appKey,
       appSecret = appSecret,
       refreshToken = refreshToken,
+      folder = folder,
     )
 
     val resultJson = buildJsonObject {
@@ -61,36 +56,19 @@ class DropboxLatestImageStep : Step {
     return context + ("text" to resultJson.toString())
   }
 
-  private fun getAccessToken(
-    appKey: String,
-    appSecret: String,
-    refreshToken: String,
-  ): String {
-    return DbxCredential(
-      "",
-      0,
-      refreshToken,
-      appKey,
-      appSecret,
-    ).refresh(DbxRequestConfig("jraf.org/webpipes"))
-      .accessToken
-  }
-
   private fun getDropboxLatestImageUrl(
     appKey: String,
     appSecret: String,
     refreshToken: String,
+    folder: String,
   ): String {
-    val accessToken = getAccessToken(
-      appKey = appKey,
-      appSecret = appSecret,
-      refreshToken = refreshToken,
-    )
-    val client = DbxClientV2(DbxRequestConfig("jraf.org/webpipes"), accessToken)
-    var listFolderResult = client.files().listFolder("/trmnl")
+    val client = getDropboxClient(appKey, appSecret, refreshToken)
+    var listFolderResult = client.files().listFolder(folder)
     val sharedLinksWithDates = mutableMapOf<String, Date>()
     while (true) {
       for (metadata in listFolderResult.getEntries()) {
+        // Ignore folders
+        if (metadata is FolderMetadata) continue
         val listSharedLinksResult: ListSharedLinksResult = client.sharing().listSharedLinksBuilder()
           .withPath(metadata.pathLower)
           .withDirectOnly(true)
@@ -116,28 +94,3 @@ class DropboxLatestImageStep : Step {
       .replace("dl=0", "dl=1")
   }
 }
-
-private fun getRefreshToken(appKey: String, appSecret: String): String {
-  val appInfo = DbxAppInfo(appKey, appSecret)
-  val requestConfig = DbxRequestConfig("jraf.org/webpipes")
-  val webAuth = DbxWebAuth(requestConfig, appInfo)
-  val webAuthRequest = DbxWebAuth.newRequestBuilder()
-    .withNoRedirect()
-    .withTokenAccessType(TokenAccessType.OFFLINE)
-    .build()
-  val authorizeUrl = webAuth.authorize(webAuthRequest)
-  println("1. Go to $authorizeUrl")
-  println("2. Click \"Allow\" (you might have to log in first).")
-  println("3. Copy the authorization code.")
-  print("Enter the authorization code here: ")
-  val code = BufferedReader(InputStreamReader(System.`in`)).readLine().trim()
-  return webAuth.finishFromCode(code).refreshToken
-}
-
-//fun main() {
-//  val refreshToken = getRefreshToken(
-//    appKey = "xxx",
-//    appSecret = "xxx",
-//  )
-//  println("Refresh token: $refreshToken")
-//}
