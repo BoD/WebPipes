@@ -64,10 +64,8 @@ class OpenAIGenerateImageStep : Step {
       .build()
 
     val imageGenerateParams = builder()
-//      .model("gpt-image-2")
-      .model("gpt-image-1")
-//      .size(ImageGenerateParams.Size.of("1280x768"))
-      .size(ImageGenerateParams.Size._1536X1024)
+      .model("gpt-image-2")
+      .size(ImageGenerateParams.Size.of("1280x768"))
       .prompt(
         """
         |A random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, or otherwise worthwhile to look at.
