@@ -30,6 +30,10 @@ import com.openai.client.okhttp.OpenAIOkHttpClient
 import com.openai.models.images.Image
 import com.openai.models.images.ImageGenerateParams
 import com.openai.models.images.ImageGenerateParams.Companion.builder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.string
@@ -37,6 +41,7 @@ import org.jraf.webpipes.main.dropbox.getDropboxClient
 import java.io.File
 import java.util.Base64
 
+private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 class OpenAIGenerateImageStep : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
@@ -46,15 +51,18 @@ class OpenAIGenerateImageStep : Step {
     val dropboxFolder: String = context.string("folder")
     val openAiApiKey: String = context.string("openAiApiKey")
 
-    val file = generateImage(openAiApiKey = openAiApiKey)
-    uploadToDropbox(
-      appKey = dropboxAppKey,
-      appSecret = dropboxAppSecret,
-      refreshToken = dropboxRefreshToken,
-      file = file,
-      destinationFilePath = "$dropboxFolder/${file.name}",
-    )
-    file.delete()
+    // Do this in the background because it can take ~30s
+    coroutineScope.launch {
+      val file = generateImage(openAiApiKey = openAiApiKey)
+      uploadToDropbox(
+        appKey = dropboxAppKey,
+        appSecret = dropboxAppSecret,
+        refreshToken = dropboxRefreshToken,
+        file = file,
+        destinationFilePath = "$dropboxFolder/${file.name}",
+      )
+      file.delete()
+    }
     return context
   }
 
