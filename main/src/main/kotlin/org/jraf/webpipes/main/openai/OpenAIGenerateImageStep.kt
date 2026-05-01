@@ -40,6 +40,7 @@ import org.jraf.webpipes.engine.util.string
 import org.jraf.webpipes.main.dropbox.getDropboxClient
 import java.io.File
 import java.util.Base64
+import kotlin.random.Random
 
 private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -51,22 +52,27 @@ class OpenAIGenerateImageStep : Step {
     val dropboxFolder: String = context.string("folder")
     val openAiApiKey: String = context.string("openAiApiKey")
 
+    val tmpFile = File("/tmp/webpipes-OpenAIGenerateImageStep.jpg")
+    if (tmpFile.exists()) return context
     // Do this in the background because it can take ~30s
     coroutineScope.launch {
-      val file = generateImage(openAiApiKey = openAiApiKey)
-      uploadToDropbox(
-        appKey = dropboxAppKey,
-        appSecret = dropboxAppSecret,
-        refreshToken = dropboxRefreshToken,
-        file = file,
-        destinationFilePath = "$dropboxFolder/${file.name}",
-      )
-      file.delete()
+      try {
+        generateImage(openAiApiKey = openAiApiKey, file = tmpFile)
+        uploadToDropbox(
+          appKey = dropboxAppKey,
+          appSecret = dropboxAppSecret,
+          refreshToken = dropboxRefreshToken,
+          file = tmpFile,
+          destinationFilePath = "$dropboxFolder/image-${System.currentTimeMillis()}.jpg",
+        )
+      } finally {
+        tmpFile.delete()
+      }
     }
     return context
   }
 
-  private fun generateImage(openAiApiKey: String): File {
+  private fun generateImage(openAiApiKey: String, file: File) {
     val client: OpenAIClient = OpenAIOkHttpClient.builder()
       .apiKey(openAiApiKey)
       .build()
@@ -80,17 +86,15 @@ class OpenAIGenerateImageStep : Step {
         |It could be about nature, technology, animals, an object, an abstract or geometric shape, a photo or drawing or painting.
         |Surprise me!
         |The image will be displayed on an e-paper display in my hallway, and I'll generate a new one every day.
+        |#Random number: ${Random.nextInt(10000)}
         |""".trimMargin(),
       )
       .build()
-
-    val file = File("/tmp/image-${System.currentTimeMillis()}.jpg")
     client.images().generate(imageGenerateParams).data().orElseThrow().stream()
       .flatMap { image: Image -> image.b64Json().stream() }
       .forEach { base64: String ->
         file.writeBytes(Base64.getDecoder().decode(base64))
       }
-    return file
   }
 
   private fun uploadToDropbox(
