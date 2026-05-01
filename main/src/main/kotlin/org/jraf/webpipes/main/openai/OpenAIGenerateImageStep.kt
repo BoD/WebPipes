@@ -27,24 +27,26 @@ package org.jraf.webpipes.main.openai
 
 import com.openai.client.OpenAIClient
 import com.openai.client.okhttp.OpenAIOkHttpClient
-import com.openai.models.images.Image
+import com.openai.models.ChatModel
 import com.openai.models.images.ImageGenerateParams
-import com.openai.models.images.ImageGenerateParams.Companion.builder
+import com.openai.models.responses.ResponseCreateParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
+import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.string
 import org.jraf.webpipes.main.dropbox.getDropboxClient
 import java.io.File
 import java.util.Base64
-import kotlin.random.Random
 
 private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 class OpenAIGenerateImageStep : Step {
+  private val logger = classLogger()
+
   override suspend fun execute(context: JsonObject): JsonObject {
     val dropboxAppKey: String = context.string("appKey")
     val dropboxAppSecret: String = context.string("appSecret")
@@ -57,6 +59,7 @@ class OpenAIGenerateImageStep : Step {
     // Do this in the background because it can take ~30s
     coroutineScope.launch {
       try {
+        tmpFile.createNewFile()
         generateImage(openAiApiKey = openAiApiKey, file = tmpFile)
         uploadToDropbox(
           appKey = dropboxAppKey,
@@ -73,28 +76,46 @@ class OpenAIGenerateImageStep : Step {
   }
 
   private fun generateImage(openAiApiKey: String, file: File) {
+    logger.debug("Generating prompt")
     val client: OpenAIClient = OpenAIOkHttpClient.builder()
       .apiKey(openAiApiKey)
       .build()
 
-    val imageGenerateParams = builder()
-      .model("gpt-image-2")
-      .size(ImageGenerateParams.Size.of("1280x768"))
-      .prompt(
+    // Create a prompt
+    val createPromptResponseCreateParams = ResponseCreateParams.builder()
+      .model(ChatModel.GPT_5_4_MINI)
+      .input(
         """
-        |A random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, or otherwise worthwhile to look at.
-        |It could be about nature, technology, animals, an object, an abstract or geometric shape, a photo or drawing or painting.
-        |Surprise me!
-        |The image will be displayed on an e-paper display in my hallway, and I'll generate a new one every day.
-        |#Random number: ${Random.nextInt(10000)}
-        |""".trimMargin(),
+          |Create 5 prompts that will be fed to an image generation tool.
+          |It's for a random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, absurd, or otherwise worthwhile to look at.
+          |It could be about nature, technology, animals, an object, a symbol, an abstract or geometric shape, a photo or drawing or painting, colorful or monochrome...
+          |Surprise me!
+          |Do not output anything other than the prompt itself. Don't specify the resolution or aspect ratio.
+          |Separate the 5 prompts with the string `----`.
+          |""".trimMargin(),
       )
       .build()
-    client.images().generate(imageGenerateParams).data().orElseThrow().stream()
-      .flatMap { image: Image -> image.b64Json().stream() }
-      .forEach { base64: String ->
-        file.writeBytes(Base64.getDecoder().decode(base64))
-      }
+    val createPromptResponse = client.responses().create(createPromptResponseCreateParams)
+    val prompts = createPromptResponse.output()
+      .flatMap { it.message().get().content() }
+      .map { it.outputText().get().text() }
+      .first()
+    logger.debug("All prompts: `$prompts`")
+    val randomPrompt = prompts.split("----").map { it.trim() }.random()
+    logger.debug("Picked prompt: `$randomPrompt`")
+
+    // Create the image from the prompt
+    logger.debug("Generating image")
+    val imageGenerateParams = ImageGenerateParams.builder()
+      .model("gpt-image-2")
+      .size(ImageGenerateParams.Size.of("1280x768"))
+      .prompt(randomPrompt)
+      .build()
+    val imageGenerateResponse = client.images().generate(imageGenerateParams)
+    val base64Image = imageGenerateResponse.data().get()
+      .map { it.b64Json().get() }
+      .first()
+    file.writeBytes(Base64.getDecoder().decode(base64Image))
   }
 
   private fun uploadToDropbox(
@@ -104,6 +125,7 @@ class OpenAIGenerateImageStep : Step {
     file: File,
     destinationFilePath: String,
   ) {
+    logger.debug("Uploading $destinationFilePath to $destinationFilePath")
     val client = getDropboxClient(
       appKey = appKey,
       appSecret = appSecret,

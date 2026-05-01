@@ -64,21 +64,15 @@ class DropboxLatestImageStep : Step {
   ): String {
     val client = getDropboxClient(appKey, appSecret, refreshToken)
     var listFolderResult = client.files().listFolder(folder)
-    val sharedLinksWithDates = mutableMapOf<String, Date>()
+    val filesWithDates = mutableMapOf<FileMetadata, Date>()
+
+    // First pass: collect all files with their dates
     while (true) {
       for (metadata in listFolderResult.getEntries()) {
         // Ignore folders
         if (metadata is FolderMetadata) continue
-        val listSharedLinksResult: ListSharedLinksResult = client.sharing().listSharedLinksBuilder()
-          .withPath(metadata.pathLower)
-          .withDirectOnly(true)
-          .start()
-        val fileDate = (metadata as FileMetadata).serverModified
-        var sharedLink = listSharedLinksResult.getLinks().firstOrNull()?.url
-        if (sharedLink == null) {
-          sharedLink = client.sharing().createSharedLinkWithSettings(metadata.pathLower).url
-        }
-        sharedLinksWithDates[sharedLink] = fileDate
+        val fileMetadata = metadata as FileMetadata
+        filesWithDates[fileMetadata] = fileMetadata.serverModified
       }
 
       // Handle pagination
@@ -87,10 +81,22 @@ class DropboxLatestImageStep : Step {
       }
       listFolderResult = client.files().listFolderContinue(listFolderResult.cursor)
     }
-    return (sharedLinksWithDates
+
+    // Find the most recent file
+    val (mostRecentFile, _) = filesWithDates
       .maxByOrNull { it.value }
-      ?: throw Exception("No files found in Dropbox folder"))
-      .key
-      .replace("dl=0", "dl=1")
+      ?: throw Exception("No files found in Dropbox folder")
+
+    // Get or create a link for the most recent file
+    val listSharedLinksResult: ListSharedLinksResult = client.sharing().listSharedLinksBuilder()
+      .withPath(mostRecentFile.pathLower)
+      .withDirectOnly(true)
+      .start()
+    var sharedLink = listSharedLinksResult.getLinks().firstOrNull()?.url
+    if (sharedLink == null) {
+      sharedLink = client.sharing().createSharedLinkWithSettings(mostRecentFile.pathLower).url
+    }
+
+    return sharedLink.replace("dl=0", "dl=1")
   }
 }
