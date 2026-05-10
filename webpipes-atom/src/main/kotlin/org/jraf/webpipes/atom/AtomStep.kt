@@ -57,7 +57,7 @@ class AtomStep : Step {
     syndFeed.entries = feed.map { feedItem ->
       feedItem as JsonObject
       SyndEntryImpl().apply {
-        title = feedItem.string("title")
+        title = feedItem.stringOrNull("title") ?: atomTitle
         link = feedItem.string("link")
         uri = feedItem.string("link")
         feedItem.stringOrNull("body")?.let { body ->

@@ -90,12 +90,21 @@
       }
     },
     {
+      "id": "handlePartDieu",
+      "type": "local:org.jraf.webpipes.main.ugcculte.HandlePartDieuStep",
+      "configuration": {
+        "contextFieldName": "baseUrl",
+        "feedItemFieldName": "link"
+      }
+    },
+    {
       "id": "putLinkIntoContextAndMapMovieCroppedBodyToFeedItemBody",
       "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
       "configuration": {
         "chain": [
           "putLinkIntoContext",
-          "mapMovieCroppedBodyToFeedItemBody"
+          "mapMovieCroppedBodyToFeedItemBody",
+          "handlePartDieu"
         ]
       }
     },
