@@ -4,33 +4,13 @@
   "steps": [
     {
       "id": "generateImage",
-      "type": "local:org.jraf.webpipes.main.openai.OpenAIGenerateImageStep",
-      "configuration": {
-        "folder": "/Trmnl/AI"
-      }
-    },
-    {
-      "id": "buildString",
-      "type": "local:org.jraf.webpipes.main.dropbox.DropboxLatestImageStep",
-      "configuration": {
-        "folder": "/Trmnl/AI"
-      }
-    },
-    {
-      "id": "cachedChain",
-      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
-      "configuration": {
-        "chain": [
-          "generateImage",
-          "buildString"
-        ]
-      }
+      "type": "local:org.jraf.webpipes.main.openai.OpenAIGenerateImageStep"
     },
     {
       "id": "cache",
       "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
       "configuration": {
-        "cachedStepId": "cachedChain",
+        "cachedStepId": "generateImage",
         "maxAge": 86400
       }
     }

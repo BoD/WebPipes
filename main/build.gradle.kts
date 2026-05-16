@@ -37,6 +37,10 @@ dependencies {
 
   // OpenAI
   implementation(libs.openai)
+
+  // JGit
+  implementation(libs.jgit)
+  implementation(libs.jgit.ssh)
 }
 
 docker {

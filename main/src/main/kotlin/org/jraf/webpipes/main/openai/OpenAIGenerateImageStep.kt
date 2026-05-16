@@ -35,11 +35,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.TextProgressMonitor
+import org.eclipse.jgit.transport.SshTransport
+import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder
+import org.eclipse.jgit.util.FS
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.classLogger
+import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
-import org.jraf.webpipes.main.dropbox.getDropboxClient
 import java.io.File
+import java.nio.file.Path
+import java.time.LocalDate
 import java.util.Base64
 
 private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -48,31 +57,26 @@ class OpenAIGenerateImageStep : Step {
   private val logger = classLogger()
 
   override suspend fun execute(context: JsonObject): JsonObject {
-    val dropboxAppKey: String = context.string("appKey")
-    val dropboxAppSecret: String = context.string("appSecret")
-    val dropboxRefreshToken: String = context.string("refreshToken")
-    val dropboxFolder: String = context.string("folder")
     val openAiApiKey: String = context.string("openAiApiKey")
 
     val tmpFile = File("/tmp/webpipes-OpenAIGenerateImageStep.jpg")
     if (tmpFile.exists()) return context
+    val fileName = LocalDate.now().toString()
     // Do this in the background because it can take ~30s
     coroutineScope.launch {
       try {
         tmpFile.createNewFile()
         generateImage(openAiApiKey = openAiApiKey, file = tmpFile)
-        uploadToDropbox(
-          appKey = dropboxAppKey,
-          appSecret = dropboxAppSecret,
-          refreshToken = dropboxRefreshToken,
-          file = tmpFile,
-          destinationFilePath = "$dropboxFolder/image-${System.currentTimeMillis()}.jpg",
-        )
+        uploadToGitHub(imageFile = tmpFile, fileName = fileName)
       } finally {
         tmpFile.delete()
       }
     }
-    return context
+    val resultJson = buildJsonObject {
+      put("url", "https://jraf.org/ai-picture-of-the-day/images/$fileName.jpg")
+    }
+
+    return context + ("text" to resultJson.toString())
   }
 
   private fun generateImage(openAiApiKey: String, file: File) {
@@ -90,6 +94,7 @@ class OpenAIGenerateImageStep : Step {
           |It's for a random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, absurd, or otherwise worthwhile to look at.
           |It could be about nature, technology, animals, an object, a symbol, an abstract or geometric shape, a photo or drawing or painting, colorful or monochrome...
           |Surprise me!
+          |The picture will be displayed on an 8in e-paper screen, please include in the prompts that the image should be optimized for that (e.g. not too much details, good contrast, etc.).
           |Do not output anything other than the prompt itself. Don't specify the resolution or aspect ratio.
           |Separate the 5 prompts with the string `----`.
           |""".trimMargin(),
@@ -118,19 +123,83 @@ class OpenAIGenerateImageStep : Step {
     file.writeBytes(Base64.getDecoder().decode(base64Image))
   }
 
-  private fun uploadToDropbox(
-    appKey: String,
-    appSecret: String,
-    refreshToken: String,
-    file: File,
-    destinationFilePath: String,
+  private fun uploadToGitHub(
+    imageFile: File,
+    fileName: String,
   ) {
-    logger.debug("Uploading $destinationFilePath to $destinationFilePath")
-    val client = getDropboxClient(
-      appKey = appKey,
-      appSecret = appSecret,
-      refreshToken = refreshToken,
-    )
-    client.files().uploadBuilder(destinationFilePath).uploadAndFinish(file.inputStream())
+    val repoDir = File("/tmp/ai-picture-of-the-day")
+    val newFile = File(repoDir, "images/$fileName.jpg")
+    if (newFile.exists()) return
+
+    val sshDir = System.getenv("SSH_DIR")?.let { File(it) } ?: File(FS.DETECTED.userHome(), "/.ssh")
+    val sshSessionFactory = SshdSessionFactoryBuilder()
+      .setPreferredAuthentications("publickey")
+      .setSshDirectory(sshDir)
+      .setDefaultIdentities { listOf(Path.of(it.absolutePath, "id_bod_2026")) }
+      .setHomeDirectory(FS.DETECTED.userHome())
+      .build(null)
+
+
+    val git: Git = if (!repoDir.exists()) {
+      Git.cloneRepository()
+        .setURI("git@github.com:BoD/ai-picture-of-the-day.git")
+        .setDirectory(repoDir)
+        .setTransportConfigCallback { transport ->
+          transport as SshTransport
+          transport.setSshSessionFactory(sshSessionFactory)
+        }
+        .setProgressMonitor(TextProgressMonitor())
+        .call()
+    } else {
+      Git.open(repoDir)
+    }
+
+    // Copy file and add it
+    imageFile.copyTo(newFile, overwrite = true)
+    git.add().addFilepattern("images").call()
+
+    // Overwrite the atom file
+    val atomText =
+      //language=xml
+      """
+        <?xml version="1.0" encoding="utf-8"?>
+        <feed xmlns="http://www.w3.org/2005/Atom">
+          <title>AI picture of the day</title>
+          <id>https://jraf.org/ai-picture-of-the-day/feed.atom</id>
+          <updated>${fileName}T00:00:00Z</updated>
+        
+          <entry>
+            <title>$fileName</title>
+            <id>https://jraf.org/ai-picture-of-the-day/images/$fileName.jpg</id>
+            <updated>${fileName}T00:00:00Z</updated>
+            <link
+              rel="enclosure"
+              type="image/png"
+              href="https://jraf.org/ai-picture-of-the-day/images/$fileName.jpg" />
+            <content type="html">
+              <![CDATA[
+                <img src="https://jraf.org/ai-picture-of-the-day/images/$fileName.jpg" />
+              ]]>
+            </content>
+          </entry>
+        </feed>
+      """.trimIndent()
+    val atomFile = File(repoDir, "feed.atom")
+    atomFile.writeText(atomText)
+    git.add().addFilepattern(atomFile.name).call()
+
+    // Commit
+    git.commit().setMessage("Add ${newFile.name}").call()
+
+    // Push
+    git.push()
+      .setTransportConfigCallback { transport ->
+        transport as SshTransport
+        transport.setSshSessionFactory(sshSessionFactory)
+      }
+      .setProgressMonitor(TextProgressMonitor())
+      .call()
+
+    git.close()
   }
 }

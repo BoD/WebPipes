@@ -10,6 +10,8 @@ dropbox-core-sdk = "7.0.0"
 rome = "2.1.0"
 xsoup = "0.3.7"
 openai = "4.32.0"
+# Can't use more modern version because they are compiled with JDK > 11
+jgit = "6.10.1.202505221210-r"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -32,3 +34,5 @@ ktor-server-statusPages = { group = "io.ktor", name = "ktor-server-status-pages"
 ktor-server-callLogging = { group = "io.ktor", name = "ktor-server-call-logging", version.ref = "ktor" }
 ktor-serialization-kotlinxJson = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 openai = { group = "com.openai", name = "openai-java", version.ref = "openai" }
+jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
+jgit-ssh = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.ssh.apache", version.ref = "jgit" }
