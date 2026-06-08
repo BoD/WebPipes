@@ -41,6 +41,9 @@ dependencies {
   // JGit
   implementation(libs.jgit)
   implementation(libs.jgit.ssh)
+
+  // Playwright
+  implementation(libs.playwright)
 }
 
 docker {
@@ -63,6 +66,38 @@ tasks.withType<DockerBuildImage> {
 }
 
 tasks.withType<Dockerfile> {
+  environmentVariable("PLAYWRIGHT_BROWSERS_PATH", "/playwright-browsers")
+
+  // Install browser dependencies
+  runCommand("apt-get update")
+  runCommand(
+    """
+    apt-get install -y \
+      libxcb-shm0\
+      libx11-xcb1\            
+      libx11-6\               
+      libxcb1\                
+      libxext6\               
+      libxrandr2\             
+      libxcomposite1\         
+      libxcursor1\            
+      libxdamage1\            
+      libxfixes3\             
+      libxi6\                 
+      libgtk-3-0\             
+      libpangocairo-1.0-0\    
+      libpango-1.0-0\         
+      libatk1.0-0\            
+      libcairo-gobject2\      
+      libcairo2\              
+      libgdk-pixbuf2.0-0\     
+      libglib2.0-0\           
+      libasound2\             
+      libxrender1\            
+      libdbus-1-3
+     """.trimIndent()
+  )
+
   // Move the COPY instructions to the end
   // See https://github.com/bmuschko/gradle-docker-plugin/issues/1093
   instructions.set(

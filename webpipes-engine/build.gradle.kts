@@ -19,6 +19,9 @@ dependencies {
   // XSoup
   implementation(libs.xsoup)
 
+  // Playwright
+  implementation(libs.playwright)
+
   // WebPipes API
   api(project(":webpipes-api"))
 }

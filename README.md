@@ -15,7 +15,11 @@ DOCKER_USERNAME=<your docker hub login> DOCKER_PASSWORD=<your docker hub passwor
 
 ```
 docker pull bodlulu/webpipes
-docker run -p <PORT TO LISTEN TO>:8080 bodlulu/webpipes
+docker run \
+  -p <PORT TO LISTEN TO>:8080 \
+  -v <path to directory containing playwright browser binaries>:/playwright-browsers \
+  -e TZ=`cat /etc/timezone` \
+  bodlulu/webpipes
 ```
 
 ## Licence

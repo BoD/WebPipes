@@ -4,7 +4,7 @@
   "steps": [
     {
       "id": "downloadPage",
-      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "type": "local:org.jraf.webpipes.engine.step.net.BrowserUrlTextStep",
       "configuration": {
         "url": "https://www.merriam-webster.com/word-of-the-day"
       }
