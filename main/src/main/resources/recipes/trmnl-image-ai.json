@@ -11,7 +11,7 @@
       "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
       "configuration": {
         "cachedStepId": "generateImage",
-        "maxAge": 86400
+        "maxAge": 3600
       }
     }
   ]
