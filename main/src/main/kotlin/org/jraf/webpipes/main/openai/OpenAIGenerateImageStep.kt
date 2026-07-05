@@ -34,8 +34,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.TextProgressMonitor
@@ -45,6 +48,7 @@ import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder
 import org.eclipse.jgit.util.FS
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.classLogger
+import org.jraf.webpipes.engine.util.jsonArray
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
 import java.io.File
@@ -71,19 +75,31 @@ class OpenAIGenerateImageStep : Step {
 
     val todayFileName = LocalDate.now().toString()
     val yesterdayFileName = LocalDate.now().minusDays(1).toString()
-    
+
     val tmpFile = File("/tmp/webpipes-OpenAIGenerateImageStep.jpg")
     val todayFile = File(repoDir, "images/$todayFileName.jpg")
+
+    val previousPrompts = context.jsonArray("previousPrompts", JsonArray(emptyList())).map { it.jsonPrimitive.content }
+    var newPrompt: String? = null
 
     if (!todayFile.exists()) {
       // Today's file doesn't exist yet: create it now
       // Except if it's already being created (tmp file exists)
       if (!tmpFile.exists()) {
+        val openAIClient = OpenAIOkHttpClient.builder()
+          .apiKey(openAiApiKey)
+          .build()
+        newPrompt = generatePrompt(openAIClient = openAIClient, previousPrompts = previousPrompts)
+
         // Do this in the background because it can take ~30s
         coroutineScope.launch {
           try {
             tmpFile.createNewFile()
-            generateImage(openAiApiKey = openAiApiKey, file = tmpFile)
+            generateImage(
+              openAIClient = openAIClient,
+              prompt = newPrompt,
+              file = tmpFile,
+            )
             uploadToGitHub(
               sshSessionFactory = sshSessionFactory,
               git = git,
@@ -102,7 +118,10 @@ class OpenAIGenerateImageStep : Step {
       val resultJson = buildJsonObject {
         put("url", "https://jraf.org/ai-picture-of-the-day/images/$yesterdayFileName.jpg?${Random.nextUInt()}")
       }
-      return context + ("text" to resultJson.toString())
+      return context +
+        ("text" to resultJson.toString()) +
+        // Save the new prompt to the context
+        ("previousPrompts" to JsonArray((previousPrompts + listOfNotNull(newPrompt)).takeLast(3).map { JsonPrimitive(it) }))
     }
 
     // Otherwise return today's file
@@ -112,44 +131,56 @@ class OpenAIGenerateImageStep : Step {
     return context + ("text" to resultJson.toString())
   }
 
-  private fun generateImage(openAiApiKey: String, file: File) {
+  private fun generatePrompt(openAIClient: OpenAIClient, previousPrompts: List<String>): String {
     logger.debug("Generating prompt")
-    val client: OpenAIClient = OpenAIOkHttpClient.builder()
-      .apiKey(openAiApiKey)
-      .build()
-
+    val previousPromptsStr = (previousPrompts.takeIf { it.isNotEmpty() }?.let {
+      "Here are the last few prompts that were used the previous days - make your prompts different this time so each day is different.\n" + it.mapIndexed { index, prompt ->
+        "Previous prompt ${index + 1}:\n$prompt"
+      }.joinToString("----\n")
+    }) ?: ""
     // Create a prompt
     val createPromptResponseCreateParams = ResponseCreateParams.builder()
       .model(ChatModel.GPT_5_4_MINI)
       .input(
         """
-          |Create 5 prompts that will be fed to an image generation tool.
-          |It's for a random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, absurd, or otherwise worthwhile to look at.
-          |It could be about nature, technology, animals, an object, a symbol, an abstract or geometric shape, a photo or drawing or painting, colorful or monochrome...
-          |Surprise me!
-          |The picture will be displayed on an 8in e-paper screen, please include in the prompts that the image should be optimized for that (e.g. not too much details, good contrast, etc.).
-          |Do not output anything other than the prompt itself. Don't specify the resolution or aspect ratio.
-          |Separate the 5 prompts with the string `----`.
-          |""".trimMargin(),
+            |Create 3 prompts that will be fed to an image generation tool (I'll pick one randomly).
+            |It's for a random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, absurd, or otherwise worthwhile to look at.
+            |It could be about nature, technology, animals, an object, a symbol, an abstract or geometric shape, a photo or drawing or painting, colorful or monochrome...
+            |Surprise me!
+            |The picture will be displayed on an 8in e-paper screen, please include in the prompts that the image should be optimized for that (e.g. not too much details, good contrast, etc.).
+            |Do not output anything other than the prompts. Do not specify the resolution or aspect ratio.
+            |Separate the 3 prompts with the string `----`.
+            |
+            |$previousPromptsStr
+            |
+            |""".trimMargin(),
       )
       .build()
-    val createPromptResponse = client.responses().create(createPromptResponseCreateParams)
-    val prompts = createPromptResponse.output()
+    val createPromptResponse = openAIClient.responses().create(createPromptResponseCreateParams)
+    val promptsStr = createPromptResponse.output()
       .flatMap { it.message().get().content() }
       .map { it.outputText().get().text() }
       .first()
-    logger.debug("All prompts: `$prompts`")
-    val randomPrompt = prompts.split("----").map { it.trim() }.random()
+    logger.debug("All prompts: `$promptsStr`")
+    val prompts = promptsStr.split("----")
+    val randomPrompt = prompts.map { it.trim() }.filter { it.isNotBlank() }.random()
     logger.debug("Picked prompt: `$randomPrompt`")
+    return randomPrompt
+  }
 
+  private fun generateImage(
+    openAIClient: OpenAIClient,
+    prompt: String,
+    file: File,
+  ) {
     // Create the image from the prompt
     logger.debug("Generating image")
     val imageGenerateParams = ImageGenerateParams.builder()
       .model("gpt-image-2")
       .size(ImageGenerateParams.Size.of("1280x768"))
-      .prompt(randomPrompt)
+      .prompt(prompt)
       .build()
-    val imageGenerateResponse = client.images().generate(imageGenerateParams)
+    val imageGenerateResponse = openAIClient.images().generate(imageGenerateParams)
     val base64Image = imageGenerateResponse.data().get()
       .map { it.b64Json().get() }
       .first()
