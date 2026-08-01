@@ -50,10 +50,10 @@ class BrowserUrlTextStep : Step {
           .use { browser ->
             val browserContext = browser.newContext(
             ).apply {
-              setDefaultTimeout(10_000.0)
+              setDefaultTimeout(60_000.0)
             }
             val page = browserContext.newPage()
-            page.navigate("https://www.merriam-webster.com/word-of-the-day")
+            page.navigate(url)
             page.waitForLoadState(LoadState.NETWORKIDLE)
             page.content()
           }
