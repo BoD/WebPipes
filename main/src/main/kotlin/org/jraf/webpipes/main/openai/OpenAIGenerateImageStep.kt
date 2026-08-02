@@ -156,8 +156,10 @@ class OpenAIGenerateImageStep : Step {
       .model(ChatModel.GPT_5_6_LUNA)
       .input(createPromptPrompt)
       .build()
+    logger.debug("createPromptPrompt: `$createPromptPrompt`")
     val createPromptResponse = openAIClient.responses().create(createPromptResponseCreateParams)
     val promptsStr = createPromptResponse.output()
+      .filter { it.message().isPresent }
       .flatMap { it.message().get().content() }
       .map { it.outputText().get().text() }
       .first()
