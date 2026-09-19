@@ -49,7 +49,7 @@ dependencies {
 docker {
   javaApplication {
     // Use OpenJ9 instead of the default one
-    baseImage.set("adoptopenjdk/openjdk11-openj9:x86_64-ubuntu-jre-11.0.30_7.1_openj9-0.57.0")
+    baseImage.set("eclipse-temurin:25")
     maintainer.set("BoD <BoD@JRAF.org>")
     ports.set(listOf(8042))
     images.add("bodlulu/${rootProject.name.lowercase()}:latest")
@@ -72,29 +72,29 @@ tasks.withType<Dockerfile> {
   runCommand("apt-get update")
   runCommand(
     """
-    apt-get install -y \
-      libxcb-shm0\
-      libx11-xcb1\            
-      libx11-6\               
-      libxcb1\                
-      libxext6\               
-      libxrandr2\             
-      libxcomposite1\         
-      libxcursor1\            
-      libxdamage1\            
-      libxfixes3\             
-      libxi6\                 
-      libgtk-3-0\             
-      libpangocairo-1.0-0\    
-      libpango-1.0-0\         
-      libatk1.0-0\            
-      libcairo-gobject2\      
-      libcairo2\              
-      libgdk-pixbuf2.0-0\     
-      libglib2.0-0\           
-      libasound2\             
-      libxrender1\            
-      libdbus-1-3
+      apt-get install -y \
+        libxcb-shm0\
+        libx11-xcb1\
+        libxrandr2\
+        libxcomposite1\
+        libxcursor1\
+        libxdamage1\
+        libxi6\
+        libxext6\
+        libxfixes3\
+        libx11-6\
+        libxcb1\
+        libgtk-3-0t64\
+        libpangocairo-1.0-0\
+        libpango-1.0-0\
+        libatk1.0-0t64\
+        libcairo-gobject2\
+        libcairo2\
+        libgdk-pixbuf-2.0-0\
+        libglib2.0-0t64\
+        libxrender1\
+        libasound2t64\
+        libdbus-1-3
      """.trimIndent()
   )
 

@@ -80,7 +80,7 @@
       "id": "cache",
       "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
       "configuration": {
-        "maxAge": 14400,
+        "maxAge": 43200,
         "cachedStepId": "cachedChain"
       }
     }
