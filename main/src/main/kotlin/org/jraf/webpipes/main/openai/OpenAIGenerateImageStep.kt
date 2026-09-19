@@ -29,6 +29,7 @@ import com.openai.client.OpenAIClient
 import com.openai.client.okhttp.OpenAIOkHttpClient
 import com.openai.models.ChatModel
 import com.openai.models.images.ImageGenerateParams
+import com.openai.models.images.ImageModel
 import com.openai.models.responses.ResponseCreateParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -178,8 +179,9 @@ class OpenAIGenerateImageStep : Step {
     // Create the image from the prompt
     logger.debug("Generating image")
     val imageGenerateParams = ImageGenerateParams.builder()
-      .model("gpt-image-2")
+      .model(ImageModel.GPT_IMAGE_2_5_SUNBURST)
       .size(ImageGenerateParams.Size.of("1280x768"))
+      .background(ImageGenerateParams.Background.TRANSPARENT)
       .prompt(prompt)
       .build()
     val imageGenerateResponse = openAIClient.images().generate(imageGenerateParams)
