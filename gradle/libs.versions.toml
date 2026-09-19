@@ -1,19 +1,19 @@
 [versions]
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
-okhttp = "5.4.0"
-ktor = "3.5.2"
+okhttp = "5.5.0"
+ktor = "3.6.0"
 docker-java-application = "10.0.0"
-slf4j = "2.0.18"
+slf4j = "2.0.19"
 # Can't use more modern version because they are compiled with JDK > 11
 dropbox-core-sdk = "7.1.1"
 rome = "2.1.0"
 xsoup = "0.3.7"
-openai = "4.49.0"
+openai = "4.65.0"
 # Can't use more modern version because they are compiled with JDK > 11
 jgit = "6.10.1.202505221210-r"
-playwright = "1.61.0"
+playwright = "1.63.0"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
