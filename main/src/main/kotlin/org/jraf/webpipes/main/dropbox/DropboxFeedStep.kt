@@ -25,7 +25,6 @@
 
 package org.jraf.webpipes.main.dropbox
 
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -44,7 +43,6 @@ class DropboxFeedStep : Step {
     val feed: List<JsonObject> = listOf(
       buildJsonObject {
         put("link", url)
-        @OptIn(ExperimentalSerializationApi::class)
         put("body", "<html><body><img src=\"$url\"></body></html>")
         put("date", Instant.now().toString())
       },
