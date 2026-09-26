@@ -1,3 +1,4 @@
+
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.Dockerfile
 import com.bmuschko.gradle.docker.tasks.image.Dockerfile.CopyFileInstruction
@@ -44,6 +45,9 @@ dependencies {
 
   // Playwright
   implementation(libs.playwright)
+
+  // Jackson annotations
+  implementation(libs.jackson.annotations)
 }
 
 docker {

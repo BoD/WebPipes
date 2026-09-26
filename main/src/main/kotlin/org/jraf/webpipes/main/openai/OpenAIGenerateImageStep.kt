@@ -141,32 +141,31 @@ class OpenAIGenerateImageStep : Step {
     }) ?: ""
     // Create a prompt
     val createPromptPrompt = """
-      |Create 3 prompts that will be fed to an image generation tool (I'll pick one randomly).
+      |Create 3 prompts that will be fed to an image generation tool (I'll pick one of them randomly).
       |It's for a random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, absurd, or otherwise worthwhile to look at.
       |It could be about nature, technology, animals, an object, a symbol, an abstract or geometric shape, a photo or drawing or painting, colorful or monochrome...
       |You can incorporate a theme based on time of year (today is ${LocalDate.now()}).
       |Surprise me!
       |The picture will be displayed on an 8in e-paper screen, please include in the prompts that the image should be optimized for that (e.g. not too much details, good contrast, etc.).
       |Do not output anything other than the prompts. Do not specify the resolution or aspect ratio.
-      |Separate the 3 prompts with the string `----`.
       |
       |$previousPromptsStr
       |
       |""".trimMargin()
     val createPromptResponseCreateParams = ResponseCreateParams.builder()
       .model(ChatModel.GPT_5_6_LUNA)
+      .text(ImagePrompts::class.java)
       .input(createPromptPrompt)
       .build()
     logger.debug("createPromptPrompt: `$createPromptPrompt`")
     val createPromptResponse = openAIClient.responses().create(createPromptResponseCreateParams)
-    val promptsStr = createPromptResponse.output()
+    val prompts: ImagePrompts = createPromptResponse.output()
       .filter { it.message().isPresent }
       .flatMap { it.message().get().content() }
-      .map { it.outputText().get().text() }
+      .map { it.outputText().get() }
       .first()
-    logger.debug("All prompts: `$promptsStr`")
-    val prompts = promptsStr.split("----")
-    val randomPrompt = prompts.map { it.trim() }.filter { it.isNotBlank() }.random()
+    logger.debug("All prompts: {}", prompts)
+    val randomPrompt = prompts.prompts.random().prompt.trim()
     logger.debug("Picked prompt: `$randomPrompt`")
     return randomPrompt
   }

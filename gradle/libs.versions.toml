@@ -10,8 +10,10 @@ dropbox-core-sdk = "8.0.2"
 rome = "2.1.0"
 xsoup = "0.3.7"
 openai = "4.65.0"
-jgit = "7.8.0.202609011348-r"
+# Not sure why, authent is not working with more recent versions
+jgit = "6.10.1.202505221210-r"
 playwright = "1.63.0"
+jackson-annotations = "2.22"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -37,3 +39,4 @@ openai = { group = "com.openai", name = "openai-java", version.ref = "openai" }
 jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
 jgit-ssh = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.ssh.apache", version.ref = "jgit" }
 playwright = { group = "com.microsoft.playwright", name = "playwright", version.ref = "playwright" }
+jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-annotations", version.ref = "jackson-annotations" }
