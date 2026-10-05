@@ -25,6 +25,10 @@
 
 package org.jraf.webpipes.engine.step.core
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.execute.StepExecutor
@@ -32,27 +36,44 @@ import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.int
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
-import org.jraf.webpipes.engine.util.stringOrNull
 import java.time.Instant
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 import kotlin.time.toKotlinDuration
 
+private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+private val cache: MutableMap<String, JsonObject> = mutableMapOf()
+
 class CacheStep : Step {
   private val logger = classLogger()
 
   override suspend fun execute(context: JsonObject): JsonObject {
     val maxAge: Duration = context.int("maxAge", 3600).toDuration(DurationUnit.SECONDS)
-    val cachedTime: Instant? = context.stringOrNull("cachedTime")?.let { Instant.parse(it) }
-    return if (cachedTime == null || java.time.Duration.between(Instant.now(), cachedTime).abs().toKotlinDuration() > maxAge) {
-      logger.debug("Cache stale or empty, executing")
-      val cachedStepId = context.string("cachedStepId")
-      val newContext = StepExecutor().execute(context + ("stepId" to cachedStepId))
-      newContext + ("cachedTime" to Instant.now().toString())
+    val cachedStepId = context.string("cachedStepId")
+    val recipeId = context.string("recipeId")
+    val cacheKey = "$recipeId/$cachedStepId"
+    val cachedContext = cache[cacheKey]
+    return if (cachedContext == null) {
+      logger.debug("Cache empty, executing")
+      val newContext = StepExecutor().execute(context + ("stepId" to cachedStepId)) + ("cachedTime" to Instant.now().toString())
+      cache[cacheKey] = newContext
+      newContext
     } else {
-      logger.debug("Returning cached value")
-      context
+      val cachedTime: Instant = Instant.parse(cachedContext.string("cachedTime"))
+      if (java.time.Duration.between(Instant.now(), cachedTime).abs().toKotlinDuration() > maxAge) {
+        logger.debug("Cache stale, returning cached value and executing in the background")
+        coroutineScope.launch {
+          try {
+            cache[cacheKey] = StepExecutor().execute(context + ("stepId" to cachedStepId)) + ("cachedTime" to Instant.now().toString())
+          } catch (e: Exception) {
+            logger.warn("Failed to execute step in the background", e)
+          }
+        }
+      } else {
+        logger.debug("Returning cached value")
+      }
+      cachedContext
     }
   }
 }

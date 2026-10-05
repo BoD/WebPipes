@@ -57,6 +57,7 @@ class RecipeExecutor {
     recipeContexts[recipeId] = StepExecutor()
       .execute(
         context +
+          ("recipeId" to recipeId) +
           ("stepId" to context.string("startStepId")) +
           ("requestUrl" to requestUrl) +
           JsonObject(queryParams.mapValues { JsonPrimitive(it.value) }),
