@@ -141,10 +141,10 @@ class OpenAIGenerateImageStep : Step {
     }) ?: ""
     // Create a prompt
     val createPromptPrompt = """
-      |Create 3 prompts that will be fed to an image generation tool (I'll pick one of them randomly).
+      |Create 4 prompts that will be fed to an image generation tool (I'll pick one of them randomly).
       |It's for a random "picture of the day", which can be anything, but should be at least either interesting, beautiful, surprising, absurd, or otherwise worthwhile to look at.
       |It could be about nature, technology, animals, an object, a symbol, an abstract or geometric shape, a photo or drawing or painting, colorful or monochrome...
-      |You can incorporate a theme based on time of year (today is ${LocalDate.now()}).
+      |You can (but don't have to!) incorporate a theme based on time of year (today is ${LocalDate.now()}).
       |Surprise me!
       |The picture will be displayed on an 8in e-paper screen, please include in the prompts that the image should be optimized for that (e.g. not too much details, good contrast, etc.).
       |Do not output anything other than the prompts. Do not specify the resolution or aspect ratio.
@@ -180,7 +180,7 @@ class OpenAIGenerateImageStep : Step {
     val imageGenerateParams = ImageGenerateParams.builder()
       .model(ImageModel.GPT_IMAGE_2_5_SUNBURST)
       .size(ImageGenerateParams.Size.of("1280x768"))
-      .background(ImageGenerateParams.Background.TRANSPARENT)
+      .outputFormat(ImageGenerateParams.OutputFormat.JPEG)
       .prompt(prompt)
       .build()
     val imageGenerateResponse = openAIClient.images().generate(imageGenerateParams)
@@ -219,7 +219,7 @@ class OpenAIGenerateImageStep : Step {
             <updated>${todayFileName}T00:00:00Z</updated>
             <link
               rel="enclosure"
-              type="image/png"
+              type="image/jpeg"
               href="https://jraf.org/ai-picture-of-the-day/images/$todayFileName.jpg" />
             <content type="html">
               <![CDATA[

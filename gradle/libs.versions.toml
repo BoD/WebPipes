@@ -1,15 +1,15 @@
 [versions]
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 okhttp = "5.5.0"
 ktor = "3.6.0"
-docker-java-application = "10.0.0"
+dockerJavaApplication = "10.0.0"
 slf4j = "2.0.20"
 dropbox-core-sdk = "8.0.2"
 rome = "2.1.0"
 xsoup = "0.3.7"
-openai = "4.75.1"
+openai = "4.78.1"
 # Not sure why, authent is not working with more recent versions
 jgit = "6.10.1.202505221210-r"
 playwright = "1.63.0"
@@ -17,7 +17,7 @@ jackson-annotations = "2.22"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-dockerJavaApplication = { id = "com.bmuschko.docker-java-application", version.ref = "docker-java-application" }
+dockerJavaApplication = { id = "com.bmuschko.docker-java-application", version.ref = "dockerJavaApplication" }
 
 [libraries]
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }

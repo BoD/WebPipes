@@ -31,7 +31,7 @@ dependencies {
   implementation(project(":webpipes-atom"))
 
   // OKHttp
-  implementation(Square.okHttp3)
+  implementation(libs.okhttp)
 
   // Dropbox
   implementation(libs.dropbox.core.sdk)
@@ -52,7 +52,6 @@ dependencies {
 
 docker {
   javaApplication {
-    // Use OpenJ9 instead of the default one
     baseImage.set("eclipse-temurin:25")
     maintainer.set("BoD <BoD@JRAF.org>")
     ports.set(listOf(8042))
@@ -72,11 +71,12 @@ tasks.withType<DockerBuildImage> {
 tasks.withType<Dockerfile> {
   environmentVariable("PLAYWRIGHT_BROWSERS_PATH", "/playwright-browsers")
 
-  // Install browser dependencies
+  // Install browser dependencies and curl
   runCommand("apt-get update")
   runCommand(
     """
       apt-get install -y \
+        curl\
         libxcb-shm0\
         libx11-xcb1\
         libxrandr2\
@@ -100,6 +100,20 @@ tasks.withType<Dockerfile> {
         libasound2t64\
         libdbus-1-3
      """.trimIndent()
+  )
+
+  // Download the OpenTelemetry Java agent
+  runCommand("curl -L -O https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar")
+
+  // OpenTelemetry Java agent configuration
+  environmentVariable(
+    mapOf(
+      "JAVA_TOOL_OPTIONS" to "-javaagent:opentelemetry-javaagent.jar",
+      "OTEL_LOGS_EXPORTER" to "none",
+      "OTEL_METRICS_EXPORTER" to "none",
+      "OTEL_TRACES_EXPORTER" to "otlp",
+      "OTEL_SERVICE_NAME" to rootProject.name.lowercase(),
+    )
   )
 
   // Move the COPY instructions to the end
