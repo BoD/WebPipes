@@ -36,7 +36,6 @@ import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.setGlobalOpenTelemetry
 import org.jraf.webpipes.server.RequestParams
 import org.jraf.webpipes.server.Server
-import org.slf4j.simple.SimpleLogger
 
 class Main {
   init {
@@ -72,11 +71,5 @@ class Main {
 }
 
 fun main() {
-  // This must be done before any logger is initialized
-  System.setProperty(SimpleLogger.LOG_FILE_KEY, "System.out")
-  System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "debug")
-  System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true")
-  System.setProperty(SimpleLogger.DATE_TIME_FORMAT_KEY, "yyyy-MM-dd HH:mm:ss")
-
   Main().start()
 }

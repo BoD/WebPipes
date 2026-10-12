@@ -20,7 +20,7 @@ application {
 dependencies {
   // Logging
   implementation(libs.slf4j.api)
-  implementation(libs.slf4j.simple)
+  implementation(libs.logback.classic)
 
   // Coroutines
   implementation(libs.kotlinx.coroutines.core)

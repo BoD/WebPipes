@@ -6,10 +6,11 @@ okhttp = "5.5.0"
 ktor = "3.6.0"
 dockerJavaApplication = "10.0.0"
 slf4j = "2.0.20"
+logback = "1.6.5"
 dropbox-core-sdk = "8.0.2"
 rome = "2.1.0"
 xsoup = "0.3.7"
-openai = "4.79.0"
+openai = "4.80.0"
 # Not sure why, authent is not working with more recent versions
 jgit = "6.10.1.202505221210-r"
 playwright = "1.63.0"
@@ -23,7 +24,7 @@ dockerJavaApplication = { id = "com.bmuschko.docker-java-application", version.r
 
 [libraries]
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
-slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
+logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 dropbox-core-sdk = { group = "com.dropbox.core", name = "dropbox-core-sdk", version.ref = "dropbox-core-sdk" }
