@@ -23,18 +23,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@file:OptIn(ExperimentalApi::class)
+
 package org.jraf.webpipes.engine.execute
 
+import io.opentelemetry.kotlin.ExperimentalApi
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
 import org.jraf.webpipes.engine.util.classLogger
+import org.jraf.webpipes.engine.util.classTracer
 import org.jraf.webpipes.engine.util.jsonArray
 import org.jraf.webpipes.engine.util.jsonObject
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
+import org.jraf.webpipes.engine.util.withSpan
 
 class StepExecutor : Step {
   private val logger = classLogger()
+  private val tracer = classTracer()
 
   override suspend fun execute(context: JsonObject): JsonObject {
     val stepId = context.string("stepId")
@@ -45,17 +51,25 @@ class StepExecutor : Step {
     val stepType = stepDeclaration.string("type")
     val stepConfiguration = stepDeclaration.jsonObject("configuration", JsonObject(emptyMap()))
     logger.debug("Executing step {}", stepType)
-    return when {
-      stepType.startsWith("local:") -> {
-        val localStepType = stepType.removePrefix("local:")
-        LocalStepExecutor(localStepType).execute(context + stepConfiguration)
-      }
+    return tracer.withSpan(
+      "executeStep",
+      {
+        setStringAttribute("stepId", stepId)
+        setStringAttribute("stepType", stepType)
+      },
+    ) {
+      when {
+        stepType.startsWith("local:") -> {
+          val localStepType = stepType.removePrefix("local:")
+          LocalStepExecutor(localStepType).execute(context + stepConfiguration)
+        }
 
-      stepType.startsWith("http:") || stepType.startsWith("https:") -> {
-        RemoteStepExecutor(stepType).execute(context + stepConfiguration)
-      }
+        stepType.startsWith("http:") || stepType.startsWith("https:") -> {
+          RemoteStepExecutor(stepType).execute(context + stepConfiguration)
+        }
 
-      else -> error("Unknown step type '$stepType'")
+        else -> error("Unknown step type '$stepType'")
+      }
     }
   }
 }

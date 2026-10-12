@@ -48,6 +48,11 @@ dependencies {
 
   // Jackson annotations
   implementation(libs.jackson.annotations)
+
+  // OpenTelemetry
+  implementation(libs.opentelemetry.kotlin.core)
+  implementation(libs.opentelemetry.kotlin.compat)
+  implementation(libs.opentelemetry.java.api)
 }
 
 docker {
@@ -109,9 +114,6 @@ tasks.withType<Dockerfile> {
   environmentVariable(
     mapOf(
       "JAVA_TOOL_OPTIONS" to "-javaagent:opentelemetry-javaagent.jar",
-      "OTEL_LOGS_EXPORTER" to "none",
-      "OTEL_METRICS_EXPORTER" to "none",
-      "OTEL_TRACES_EXPORTER" to "otlp",
       "OTEL_SERVICE_NAME" to rootProject.name.lowercase(),
     )
   )

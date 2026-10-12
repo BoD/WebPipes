@@ -23,8 +23,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@file:OptIn(ExperimentalApi::class)
+
 package org.jraf.webpipes.engine.recipe
 
+import io.opentelemetry.kotlin.ExperimentalApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -34,14 +37,17 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jraf.webpipes.engine.execute.StepExecutor
 import org.jraf.webpipes.engine.util.classLogger
+import org.jraf.webpipes.engine.util.classTracer
 import org.jraf.webpipes.engine.util.httpClient
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
+import org.jraf.webpipes.engine.util.withSpan
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class RecipeExecutor {
   private val logger = classLogger()
+  private val tracer = classTracer()
 
   private val recipeContexts = mutableMapOf<String, JsonObject>()
 
@@ -51,48 +57,62 @@ class RecipeExecutor {
     queryParams: Map<String, String>,
   ): ExecutionResult {
     logger.debug("Executing recipe {}", recipeId)
-    var context = recipeContexts.getOrPut(recipeId) {
-      downloadRecipe(recipeId)
-    }
-    recipeContexts[recipeId] = StepExecutor()
-      .execute(
-        context +
-          ("recipeId" to recipeId) +
-          ("stepId" to context.string("startStepId")) +
-          ("requestUrl" to requestUrl) +
-          JsonObject(queryParams.mapValues { JsonPrimitive(it.value) }),
+    return tracer.withSpan(
+      "executeRecipe",
+      {
+        setStringAttribute("recipeId", recipeId)
+      },
+    ) {
+      var context = recipeContexts.getOrPut(recipeId) {
+        downloadRecipe(recipeId)
+      }
+      recipeContexts[recipeId] = StepExecutor()
+        .execute(
+          context +
+            ("recipeId" to recipeId) +
+            ("stepId" to context.string("startStepId")) +
+            ("requestUrl" to requestUrl) +
+            JsonObject(queryParams.mapValues { JsonPrimitive(it.value) }),
+        )
+      context = recipeContexts[recipeId]!!
+      val resultFieldName = context.string("resultFieldName", "text")
+      ExecutionResult(
+        body = context.string(resultFieldName),
+        contentType = context.string("resultContentType", "text/plain"),
       )
-    context = recipeContexts[recipeId]!!
-    val resultFieldName = context.string("resultFieldName", "text")
-    return ExecutionResult(
-      body = context.string(resultFieldName),
-      contentType = context.string("resultContentType", "text/plain"),
-    )
+    }
   }
 
   private suspend fun downloadRecipe(recipeId: String): JsonObject {
     logger.debug("Downloading recipe {}", recipeId)
-    val request = Request.Builder().url(recipeId).build()
-    val call = httpClient.newCall(request)
-    val response: Response = try {
-      suspendCancellableCoroutine { continuation ->
-        continuation.invokeOnCancellation {
-          call.cancel()
+    return tracer.withSpan(
+      "downloadRecipe",
+      {
+        setStringAttribute("recipeId", recipeId)
+      },
+    ) {
+      val request = Request.Builder().url(recipeId).build()
+      val call = httpClient.newCall(request)
+      val response: Response = try {
+        suspendCancellableCoroutine { continuation ->
+          continuation.invokeOnCancellation {
+            call.cancel()
+          }
+          try {
+            continuation.resume(call.execute())
+          } catch (e: Exception) {
+            continuation.resumeWithException(e)
+          }
         }
-        try {
-          continuation.resume(call.execute())
-        } catch (e: Exception) {
-          continuation.resumeWithException(e)
-        }
+      } catch (e: Exception) {
+        logger.warn("Failed to download recipe $recipeId", e)
+        throw e
       }
-    } catch (e: Exception) {
-      logger.warn("Failed to download recipe $recipeId", e)
-      throw e
-    }
 
-    return response.use { resp ->
-      val body = resp.body.string()
-      Json.parseToJsonElement(body).jsonObject
+      response.use { resp ->
+        val body = resp.body.string()
+        Json.parseToJsonElement(body).jsonObject
+      }
     }
   }
 

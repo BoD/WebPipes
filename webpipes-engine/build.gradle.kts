@@ -22,6 +22,10 @@ dependencies {
   // Playwright
   implementation(libs.playwright)
 
+  // OpenTelemetry
+  implementation(libs.opentelemetry.kotlin.api)
+  implementation(libs.opentelemetry.kotlin.noop)
+
   // WebPipes API
   api(project(":webpipes-api"))
 }

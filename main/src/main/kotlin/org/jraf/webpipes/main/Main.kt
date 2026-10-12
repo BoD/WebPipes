@@ -23,16 +23,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@file:OptIn(ExperimentalApi::class)
+
 package org.jraf.webpipes.main
 
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.kotlin.ExperimentalApi
+import io.opentelemetry.kotlin.toOtelKotlinApi
 import org.jraf.webpipes.engine.execute.LocalStepExecutor
 import org.jraf.webpipes.engine.recipe.RecipeExecutor
 import org.jraf.webpipes.engine.util.classLogger
+import org.jraf.webpipes.engine.util.setGlobalOpenTelemetry
 import org.jraf.webpipes.server.RequestParams
 import org.jraf.webpipes.server.Server
 import org.slf4j.simple.SimpleLogger
 
 class Main {
+  init {
+    setGlobalOpenTelemetry(GlobalOpenTelemetry.getOrNoop().toOtelKotlinApi())
+  }
   private val logger = classLogger()
   private val recipeExecutor = RecipeExecutor()
 
