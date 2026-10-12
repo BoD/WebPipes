@@ -20,7 +20,7 @@ application {
 dependencies {
   // Logging
   implementation(libs.slf4j.api)
-  implementation(libs.logback.classic)
+  implementation(libs.logback)
 
   // Coroutines
   implementation(libs.kotlinx.coroutines.core)
@@ -81,28 +81,28 @@ tasks.withType<Dockerfile> {
   runCommand(
     """
       apt-get install -y \
-        curl\
-        libxcb-shm0\
-        libx11-xcb1\
-        libxrandr2\
-        libxcomposite1\
-        libxcursor1\
-        libxdamage1\
-        libxi6\
-        libxext6\
-        libxfixes3\
-        libx11-6\
-        libxcb1\
-        libgtk-3-0t64\
-        libpangocairo-1.0-0\
-        libpango-1.0-0\
-        libatk1.0-0t64\
-        libcairo-gobject2\
-        libcairo2\
-        libgdk-pixbuf-2.0-0\
-        libglib2.0-0t64\
-        libxrender1\
-        libasound2t64\
+        curl \
+        libxcb-shm0 \
+        libx11-xcb1 \
+        libxrandr2 \
+        libxcomposite1 \
+        libxcursor1 \
+        libxdamage1 \
+        libxi6 \
+        libxext6 \
+        libxfixes3 \
+        libx11-6 \
+        libxcb1 \
+        libgtk-3-0t64 \
+        libpangocairo-1.0-0 \
+        libpango-1.0-0 \
+        libatk1.0-0t64 \
+        libcairo-gobject2 \
+        libcairo2 \
+        libgdk-pixbuf-2.0-0 \
+        libglib2.0-0t64 \
+        libxrender1 \
+        libasound2t64 \
         libdbus-1-3
      """.trimIndent()
   )
