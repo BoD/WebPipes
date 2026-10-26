@@ -77,10 +77,10 @@ tasks.withType<Dockerfile> {
   environmentVariable("PLAYWRIGHT_BROWSERS_PATH", "/playwright-browsers")
 
   // Install browser dependencies and curl
-  runCommand("apt-get update")
   runCommand(
     """
-      apt-get install -y \
+      apt-get update && \
+      apt-get install -y --fix-missing \
         curl \
         libxcb-shm0 \
         libx11-xcb1 \

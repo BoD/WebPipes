@@ -27,6 +27,7 @@ package org.jraf.webpipes.engine.step.html
 
 import kotlinx.serialization.json.JsonObject
 import org.jraf.webpipes.api.Step
+import org.jraf.webpipes.engine.util.classLogger
 import org.jraf.webpipes.engine.util.plus
 import org.jraf.webpipes.engine.util.string
 import org.jraf.webpipes.engine.util.stringOrNull
@@ -35,6 +36,8 @@ import org.jsoup.nodes.Document
 import us.codecraft.xsoup.Xsoup
 
 class HtmlExtractStep : Step {
+  private val logger = classLogger()
+
   override suspend fun execute(context: JsonObject): JsonObject {
     val baseUrl = context.stringOrNull("baseUrl")
     val xPath = context.string("xPath")
@@ -43,7 +46,11 @@ class HtmlExtractStep : Step {
     val outputFieldName = context.string("outputFieldName", "text")
 
     val document: Document = if (baseUrl == null) Jsoup.parse(text) else Jsoup.parse(text, baseUrl)
-    val extracted = xPathEvaluator.evaluate(document).elements.first()!!.html()
+    val extracted = runCatching { xPathEvaluator.evaluate(document).elements.first()!!.html() }
+      .getOrElse {
+        logger.warn("Error extracting HTML using XPath {}", xPath, it)
+        throw it
+      }
     return context + (outputFieldName to extracted)
   }
 }

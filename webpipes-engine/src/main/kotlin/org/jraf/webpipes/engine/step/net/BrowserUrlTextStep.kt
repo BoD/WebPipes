@@ -42,23 +42,29 @@ class BrowserUrlTextStep : Step {
   override suspend fun execute(context: JsonObject): JsonObject {
     val url: String = context.string("url")
     logger.debug("Fetching {} using PlayWright", url)
-    val body = runInterruptible(Dispatchers.IO) {
-      Playwright.create().use { playwright ->
-        playwright
-          .firefox()
-          .launch(BrowserType.LaunchOptions().setHeadless(true))
-          .use { browser ->
-            val browserContext = browser.newContext(
-            ).apply {
-              setDefaultTimeout(60_000.0)
+    val body = runCatching {
+      runInterruptible(Dispatchers.IO) {
+        Playwright.create().use { playwright ->
+          playwright
+            .firefox()
+            .launch(BrowserType.LaunchOptions().setHeadless(true))
+            .use { browser ->
+              val browserContext = browser.newContext().apply {
+                setDefaultTimeout(60_000.0)
+              }
+              val page = browserContext.newPage()
+              page.navigate(url)
+              page.waitForLoadState(LoadState.NETWORKIDLE)
+              page.content()
             }
-            val page = browserContext.newPage()
-            page.navigate(url)
-            page.waitForLoadState(LoadState.NETWORKIDLE)
-            page.content()
-          }
+        }
       }
+    }.getOrElse {
+      logger.warn("Error fetching $url using PlayWright", it)
+      throw it
     }
+//    logger.debug("Fetched {} using PlayWright, body=\n```\n{}\n```", url, body)
+    logger.debug("Fetched {} using PlayWright, length={}", url, body.length)
     return context + ("text" to body)
   }
 }
