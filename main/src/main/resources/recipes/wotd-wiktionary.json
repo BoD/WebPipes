@@ -1,0 +1,185 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/json",
+  "steps": [
+    {
+      "id": "downloadFeed",
+      "type": "local:org.jraf.webpipes.engine.step.net.UrlTextStep",
+      "configuration": {
+        "url": "https://en.wiktionary.org/w/api.php?action=featuredfeed&feed=wotd&feedformat=atom",
+        "headers": {
+          "User-Agent": "WebPipes/1.0 (https://github.com/BoD/WebPipes)"
+        }
+      }
+    },
+    {
+      "id": "selectLatestSummary",
+      "type": "local:org.jraf.webpipes.engine.step.text.ReplaceStep",
+      "configuration": {
+        "regex": "(?s).*<summary\\b[^>]*>(.*?)</summary>.*",
+        "replacement": "$1"
+      }
+    },
+    {
+      "id": "decodeSummary",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlCropStep",
+      "configuration": {
+        "xPath": "//body",
+        "extractText": true
+      }
+    },
+    {
+      "id": "removeLinks",
+      "type": "local:org.jraf.webpipes.engine.step.text.ReplaceStep",
+      "configuration": {
+        "regex": "</?a\\b[^>]*>",
+        "replacement": ""
+      }
+    },
+    {
+      "id": "extractWord",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//span[@id='WOTD-rss-title']",
+        "outputFieldName": "word"
+      }
+    },
+    {
+      "id": "extractType",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//table[@class='wotd-container']/tbody/tr[2]/td/i",
+        "outputFieldName": "type"
+      }
+    },
+    {
+      "id": "expandType",
+      "type": "local:org.jraf.webpipes.engine.step.text.MapTextStep",
+      "configuration": {
+        "inputFieldName": "type",
+        "outputFieldName": "type",
+        "mappings": {
+          "n": "Noun",
+          "v": "Verb",
+          "adj": "Adjective",
+          "adv": "Adverb",
+          "pron": "Pronoun",
+          "prep": "Preposition",
+          "conj": "Conjunction",
+          "interj": "Interjection",
+          "det": "Determiner",
+          "num": "Numeral",
+          "prop n": "Proper noun"
+        }
+      }
+    },
+    {
+      "id": "extractDefinition",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlExtractStep",
+      "configuration": {
+        "xPath": "//div[@id='WOTD-rss-description']/ol[1]",
+        "outputFieldName": "definition"
+      }
+    },
+    {
+      "id": "extractFactoid",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlCropStep",
+      "configuration": {
+        "xPath": "//div[@id='WOTD-rss-description']/p/span[contains(@style,'font-size:80%')]",
+        "extractText": true
+      }
+    },
+    {
+      "id": "saveFactoid",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "text",
+        "targetFieldName": "factoid"
+      }
+    },
+    {
+      "id": "definitionToText",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "definition",
+        "targetFieldName": "text"
+      }
+    },
+    {
+      "id": "stripDefinitionHtml",
+      "type": "local:org.jraf.webpipes.engine.step.html.HtmlCropStep",
+      "configuration": {
+        "xPath": "//body",
+        "extractText": true
+      }
+    },
+    {
+      "id": "saveDefinition",
+      "type": "local:org.jraf.webpipes.engine.step.core.CopyContextFieldStep",
+      "configuration": {
+        "sourceFieldName": "text",
+        "targetFieldName": "definition"
+      }
+    },
+    {
+      "id": "contextToJson",
+      "type": "local:org.jraf.webpipes.engine.step.json.ContextToJsonStep",
+      "configuration": {
+        "outputFieldName": "json"
+      }
+    },
+    {
+      "id": "filterJsonKeys",
+      "type": "local:org.jraf.webpipes.engine.step.json.JsonFilterKeysStep",
+      "configuration": {
+        "inputFieldName": "json",
+        "allowedKeys": [
+          "word",
+          "type",
+          "definition",
+          "factoid"
+        ]
+      }
+    },
+    {
+      "id": "jsonToText",
+      "type": "local:org.jraf.webpipes.engine.step.json.JsonToTextStep",
+      "configuration": {
+        "inputFieldName": "json",
+        "outputFieldName": "text"
+      }
+    },
+    {
+      "id": "cachedChain",
+      "type": "local:org.jraf.webpipes.engine.execute.StepChainExecutor",
+      "configuration": {
+        "chain": [
+          "downloadFeed",
+          "selectLatestSummary",
+          "decodeSummary",
+          "removeLinks",
+          "extractWord",
+          "extractType",
+          "expandType",
+          "extractDefinition",
+          "extractFactoid",
+          "saveFactoid",
+          "definitionToText",
+          "stripDefinitionHtml",
+          "saveDefinition",
+          "contextToJson",
+          "filterJsonKeys",
+          "jsonToText"
+        ]
+      }
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "cachedStepId": "cachedChain",
+        "maxAge": 43200
+      }
+    }
+  ]
+}
