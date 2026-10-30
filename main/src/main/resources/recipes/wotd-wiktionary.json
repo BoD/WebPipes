@@ -16,6 +16,7 @@
       "id": "selectLatestSummary",
       "type": "local:org.jraf.webpipes.engine.step.text.ReplaceStep",
       "configuration": {
+        "inputFieldName": "text",
         "regex": "(?s).*<summary\\b[^>]*>(.*?)</summary>.*",
         "replacement": "$1"
       }
@@ -178,7 +179,7 @@
       "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
       "configuration": {
         "cachedStepId": "cachedChain",
-        "maxAge": 43200
+        "maxAge": 5
       }
     }
   ]
