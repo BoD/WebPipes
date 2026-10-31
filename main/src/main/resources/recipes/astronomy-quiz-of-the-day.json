@@ -1,0 +1,18 @@
+{
+  "startStepId": "cache",
+  "resultContentType": "application/json",
+  "steps": [
+    {
+      "id": "generateQuiz",
+      "type": "local:org.jraf.webpipes.main.astronomyquizoftheday.AstronomyQuizOfTheDayStep"
+    },
+    {
+      "id": "cache",
+      "type": "local:org.jraf.webpipes.engine.step.core.CacheStep",
+      "configuration": {
+        "cachedStepId": "generateQuiz",
+        "maxAge": 86400
+      }
+    }
+  ]
+}
